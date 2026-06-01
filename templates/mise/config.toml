@@ -1,14 +1,17 @@
 [tools]
 detox = "latest"
+eza = "latest"
 elixir = "1.19.5"
 erlang = "28.5"
 "github:Ataraxy-Labs/lazydiff" = "0.1.0-alpha.7"
+gh = "latest"
 go = "latest"
 helm = "latest"
 java = "latest"
 neovim = "latest"
 node = "26.1.0"
 python = "3.13.13"
+ripgrep = "latest"
 ruby = "3.4.5"
 rust = "latest"
 

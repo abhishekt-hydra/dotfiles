@@ -5,10 +5,8 @@ build-essential
 ca-certificates
 curl
 direnv
-eza
 fd-find
 fzf
-gh
 git
 iproute2
 jq
@@ -18,7 +16,6 @@ libreadline-dev
 libssl-dev
 libyaml-dev
 pkg-config
-ripgrep
 rsync
 starship
 stow

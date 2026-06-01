@@ -52,8 +52,8 @@ Relink only:
 
 ## Tool strategy
 
-- Package manager installs only base CLI tools and build prerequisites.
-- Mise installs runtimes/dev tools from `templates/mise/config.toml`: node, python, ruby, go, rust, java, erlang/elixir, neovim, helm, etc.
+- Package manager installs only base system tools and build prerequisites.
+- Mise installs runtimes/dev CLIs from `templates/mise/config.toml`: node, python, ruby, go, rust, java, erlang/elixir, neovim, helm, eza, gh, ripgrep, etc.
 - Shell startup activates mise through `topics/common/system/mise.zsh`.
 
 ## Ideas borrowed from holman/dotfiles
