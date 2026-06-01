@@ -15,6 +15,7 @@ libncurses-dev
 libreadline-dev
 libssl-dev
 libyaml-dev
+openssh-client
 pkg-config
 rsync
 starship

@@ -42,6 +42,19 @@ Mise only:
 ./script/mise --no-tools
 ```
 
+SSH/GitHub account setup:
+
+```sh
+./script/ssh           # non-destructive: backs up config, creates missing keys, prints public keys
+```
+
+This uses the repo's git split:
+
+```txt
+github.com-personal -> ~/.ssh/id_ed25519_personal
+github.com-hydra    -> ~/.ssh/id_ed25519_hydra
+```
+
 Relink only:
 
 ```sh
