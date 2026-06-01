@@ -29,23 +29,17 @@ install_macos() {
 }
 
 install_linux() {
-  if command -v apt-get >/dev/null 2>&1; then
-    local file="$DOTFILES_ROOT/packages/linux/apt.txt"
-    sudo apt-get update
-    mapfile -t pkgs < <(grep -Ev '^\s*(#|$)' "$file")
-    sudo apt-get install -y "${pkgs[@]}"
-  elif command -v dnf >/dev/null 2>&1; then
-    local file="$DOTFILES_ROOT/packages/linux/dnf.txt"
-    mapfile -t pkgs < <(grep -Ev '^\s*(#|$)' "$file")
-    sudo dnf install -y "${pkgs[@]}"
-  elif command -v pacman >/dev/null 2>&1; then
-    local file="$DOTFILES_ROOT/packages/linux/pacman.txt"
-    mapfile -t pkgs < <(grep -Ev '^\s*(#|$)' "$file")
-    sudo pacman -Syu --needed --noconfirm "${pkgs[@]}"
-  else
-    echo "No supported Linux package manager found. Install stow manually, then run ./script/link common linux" >&2
+  if ! command -v apt-get >/dev/null 2>&1; then
+    echo "Linux setup supports Ubuntu/apt only. Install stow manually, then run ./script/link common linux." >&2
     exit 1
   fi
+
+  local file="$DOTFILES_ROOT/packages/linux/apt.txt"
+  local pkgs=()
+
+  sudo apt-get update
+  mapfile -t pkgs < <(grep -Ev '^\s*(#|$)' "$file")
+  sudo apt-get install -y "${pkgs[@]}"
 }
 
 case "$profile" in

@@ -59,7 +59,17 @@ setup_gitconfig_local() {
   fi
 }
 
+ensure_secrets_file() {
+  local target="$HOME/.secrets"
+
+  if [[ ! -e "$target" ]]; then
+    install -m 0600 /dev/null "$target"
+    echo "Created empty $target"
+  fi
+}
+
 setup_gitconfig_local
+ensure_secrets_file
 
 if [[ "$install_packages" == "true" ]]; then
   ./script/install "$profile"

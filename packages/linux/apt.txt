@@ -10,6 +10,7 @@ fd-find
 fzf
 gh
 git
+iproute2
 jq
 libffi-dev
 libncurses-dev
@@ -18,11 +19,16 @@ libssl-dev
 libyaml-dev
 pkg-config
 ripgrep
+rsync
+starship
 stow
 tar
 tmux
 unzip
 wget
+wl-clipboard
+xclip
 xz-utils
 zlib1g-dev
+zoxide
 zsh

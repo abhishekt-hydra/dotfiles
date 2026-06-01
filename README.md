@@ -12,7 +12,7 @@ topics/common/**/*.zsh Shared shell modules auto-loaded by .zshrc
 topics/macos/**/*.zsh  macOS shell modules auto-loaded on macOS
 topics/linux/**/*.zsh  Linux shell modules auto-loaded on Linux
 packages/macos/        Homebrew Brewfile for base tools/build prerequisites
-packages/linux/        apt/dnf/pacman base tools/build prerequisites
+packages/linux/apt.txt Ubuntu/apt base tools/build prerequisites
 templates/mise/config.toml Global mise tool versions copied to ~/.config/mise/config.toml
 os/macos/              Optional macOS defaults scripts
 hosts/<hostname>/      Optional machine-specific shell snippets
