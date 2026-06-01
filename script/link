@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+DOTFILES_ROOT="$(pwd -P)"
+
+if ! command -v stow >/dev/null 2>&1; then
+  echo "GNU Stow is required. Run ./install.sh macos or ./install.sh linux first." >&2
+  exit 1
+fi
+
+if [[ $# -eq 0 ]]; then
+  set -- common
+fi
+
+for package in "$@"; do
+  if [[ -d "$DOTFILES_ROOT/stow/$package" ]]; then
+    echo "Linking stow/$package -> $HOME"
+    stow --dir "$DOTFILES_ROOT/stow" --target "$HOME" --verbose --restow "$package"
+  else
+    echo "Skipping missing stow package: $package"
+  fi
+done

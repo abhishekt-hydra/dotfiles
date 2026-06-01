@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+DOTFILES_ROOT="$(pwd -P)"
+
+profile="auto"
+install_packages=true
+
+usage() {
+  cat <<'EOF'
+Usage: ./install.sh [auto|common|macos|linux] [--no-packages]
+
+Default: auto-detect OS, install packages, link dotfiles, copy mise config, run mise install.
+EOF
+}
+
+detect_profile() {
+  case "$(uname -s)" in
+    Darwin) echo "macos" ;;
+    Linux) echo "linux" ;;
+    *) echo "common" ;;
+  esac
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    auto|common|macos|linux) profile="$1" ;;
+    --no-packages|--link-only) install_packages=false ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown argument: $1" >&2; usage; exit 1 ;;
+  esac
+  shift
+done
+
+if [[ "$profile" == "auto" ]]; then
+  profile="$(detect_profile)"
+fi
+
+setup_gitconfig_local() {
+  local target="$HOME/.gitconfig.local"
+  local template="$DOTFILES_ROOT/templates/gitconfig.local"
+
+  [[ -f "$target" ]] && return 0
+  [[ -f "$template" ]] || return 0
+
+  if [[ -t 0 ]]; then
+    printf "Git author name: "
+    read -r git_name
+    printf "Git author email: "
+    read -r git_email
+    sed -e "s/AUTHOR_NAME/${git_name//\//\/}/g" \
+        -e "s/AUTHOR_EMAIL/${git_email//\//\/}/g" \
+        "$template" > "$target"
+    echo "Created $target"
+  else
+    cp "$template" "$target"
+    echo "Created $target from template; edit user.name/user.email"
+  fi
+}
+
+setup_gitconfig_local
+
+if [[ "$install_packages" == "true" ]]; then
+  ./script/install "$profile"
+fi
+
+packages=(common)
+if [[ "$profile" != "common" ]]; then
+  packages+=("$profile")
+fi
+
+./script/link "${packages[@]}"
+
+if [[ "$install_packages" == "true" ]]; then
+  ./script/mise "$profile"
+else
+  ./script/mise "$profile" --no-install --no-tools
+fi
+
+echo "Done. Restart your shell or run: exec zsh"

@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+DOTFILES_ROOT="$(pwd -P)"
+
+profile="${1:-auto}"
+install_mise=true
+install_tools=true
+copy_config=true
+
+usage() {
+  cat <<'EOF'
+Usage: ./script/mise [auto|common|macos|linux] [--no-install] [--no-tools] [--no-copy]
+
+Installs mise if needed, copies templates/mise/config.toml to the global mise config,
+then runs `mise install` so mise installs all configured tools.
+EOF
+}
+
+if [[ $# -gt 0 ]]; then
+  case "$1" in
+    auto|common|macos|linux) profile="$1"; shift ;;
+  esac
+fi
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --no-install) install_mise=false ;;
+    --no-tools) install_tools=false ;;
+    --no-copy) copy_config=false ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown argument: $1" >&2; usage; exit 1 ;;
+  esac
+  shift
+done
+
+if [[ "$profile" == "auto" ]]; then
+  case "$(uname -s)" in
+    Darwin) profile="macos" ;;
+    Linux) profile="linux" ;;
+    *) profile="common" ;;
+  esac
+fi
+
+# Ensure common install locations are visible in non-interactive scripts.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+install_mise_if_needed() {
+  if command -v mise >/dev/null 2>&1; then
+    echo "mise already installed: $(mise --version)"
+    return 0
+  fi
+
+  if [[ "$install_mise" != "true" ]]; then
+    if [[ "$install_tools" == "true" ]]; then
+      echo "mise is not installed and --no-install was used" >&2
+      exit 1
+    fi
+
+    echo "mise is not installed; skipped mise install"
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "curl is required to install mise. Run ./script/install $profile first." >&2
+    exit 1
+  fi
+
+  echo "Installing mise via https://mise.run ..."
+  curl https://mise.run | sh
+
+  hash -r
+  if ! command -v mise >/dev/null 2>&1; then
+    echo "mise install completed but mise is not on PATH. Expected ~/.local/bin/mise or Homebrew mise." >&2
+    exit 1
+  fi
+}
+
+copy_mise_config() {
+  [[ "$copy_config" == "true" ]] || return 0
+
+  local src="$DOTFILES_ROOT/templates/mise/config.toml"
+  local config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local dst="$config_home/mise/config.toml"
+
+  if [[ ! -f "$src" ]]; then
+    echo "Missing source mise config: $src" >&2
+    exit 1
+  fi
+
+  mkdir -p "$(dirname "$dst")"
+
+  if [[ -e "$dst" ]]; then
+    if cmp -s "$src" "$dst"; then
+      echo "mise config already up to date: $dst"
+      return 0
+    fi
+
+    local backup="$dst.backup.$(date +%Y%m%d%H%M%S)"
+    cp "$dst" "$backup"
+    echo "Backed up existing mise config to $backup"
+  fi
+
+  install -m 0644 "$src" "$dst"
+  echo "Copied mise config to $dst"
+}
+
+install_mise_tools() {
+  [[ "$install_tools" == "true" ]] || return 0
+
+  echo "Installing mise tools from global config..."
+  mise install --yes
+}
+
+copy_mise_config
+install_mise_if_needed
+install_mise_tools
+
+echo "mise setup complete."

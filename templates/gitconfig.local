@@ -1,0 +1,7 @@
+[user]
+    name = AUTHOR_NAME
+    email = AUTHOR_EMAIL
+
+# macOS example:
+# [credential]
+#     helper = osxkeychain

@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+DOTFILES_ROOT="$(pwd -P)"
+profile="${1:-auto}"
+
+if [[ "$profile" == "auto" ]]; then
+  case "$(uname -s)" in
+    Darwin) profile="macos" ;;
+    Linux) profile="linux" ;;
+    *) profile="common" ;;
+  esac
+fi
+
+install_macos() {
+  if ! command -v brew >/dev/null 2>&1; then
+    echo "Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  fi
+
+  if [[ -x /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [[ -x /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
+
+  brew bundle --file "$DOTFILES_ROOT/packages/macos/Brewfile"
+}
+
+install_linux() {
+  if command -v apt-get >/dev/null 2>&1; then
+    local file="$DOTFILES_ROOT/packages/linux/apt.txt"
+    sudo apt-get update
+    mapfile -t pkgs < <(grep -Ev '^\s*(#|$)' "$file")
+    sudo apt-get install -y "${pkgs[@]}"
+  elif command -v dnf >/dev/null 2>&1; then
+    local file="$DOTFILES_ROOT/packages/linux/dnf.txt"
+    mapfile -t pkgs < <(grep -Ev '^\s*(#|$)' "$file")
+    sudo dnf install -y "${pkgs[@]}"
+  elif command -v pacman >/dev/null 2>&1; then
+    local file="$DOTFILES_ROOT/packages/linux/pacman.txt"
+    mapfile -t pkgs < <(grep -Ev '^\s*(#|$)' "$file")
+    sudo pacman -Syu --needed --noconfirm "${pkgs[@]}"
+  else
+    echo "No supported Linux package manager found. Install stow manually, then run ./script/link common linux" >&2
+    exit 1
+  fi
+}
+
+case "$profile" in
+  common)
+    if ! command -v stow >/dev/null 2>&1; then
+      echo "Profile 'common' does not install packages. Install GNU Stow first or run ./install.sh macos/linux." >&2
+      exit 1
+    fi
+    ;;
+  macos) install_macos ;;
+  linux) install_linux ;;
+  *) echo "Unknown profile: $profile" >&2; exit 1 ;;
+esac
