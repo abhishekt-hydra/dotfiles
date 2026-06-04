@@ -25,5 +25,12 @@ done
 
 unset _fzf_keybindings _fzf_keybindings_candidates
 
+# Completion behavior:
+# - show/select the completion menu on the first Tab
+# - match case-insensitively, so `cd desk<Tab>` finds `Desktop`
+zmodload zsh/complist
+setopt AUTO_LIST AUTO_MENU COMPLETE_IN_WORD
+
+zstyle ':completion:*' menu select=1
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 zstyle ':fzf-tab:*' case-sensitive no
-zstyle ':completion:*' menu select
