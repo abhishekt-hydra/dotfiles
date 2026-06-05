@@ -6,12 +6,16 @@ DOTFILES_ROOT="$(pwd -P)"
 
 profile="auto"
 install_packages=true
+mise_extra_args=()
 
 usage() {
   cat <<'EOF'
-Usage: ./install.sh [auto|common|macos|linux] [--no-packages]
+Usage: ./install.sh [auto|common|macos|linux] [--no-packages] [--with-k8s-tools]
 
 Default: auto-detect OS, install packages, link dotfiles, copy mise config, run mise install.
+
+Optional tool groups:
+  --with-k8s-tools  Install kubefwd, kubectl, and grpcurl through mise (not Homebrew).
 EOF
 }
 
@@ -27,6 +31,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     auto|common|macos|linux) profile="$1" ;;
     --no-packages|--link-only) install_packages=false ;;
+    --with-k8s-tools|--with-optional-tools) mise_extra_args+=("--with-k8s-tools") ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; usage; exit 1 ;;
   esac
@@ -83,9 +88,9 @@ fi
 ./script/link "${packages[@]}"
 
 if [[ "$install_packages" == "true" ]]; then
-  ./script/mise "$profile"
+  ./script/mise "$profile" "${mise_extra_args[@]}"
 else
-  ./script/mise "$profile" --no-install --no-tools
+  ./script/mise "$profile" --no-install --no-tools "${mise_extra_args[@]}"
 fi
 
 echo "Done. Restart your shell or run: exec zsh"

@@ -33,13 +33,15 @@ Force a profile:
 ./install.sh macos
 ./install.sh linux
 ./install.sh common --no-packages
+./install.sh macos --with-k8s-tools   # optional: kubefwd, kubectl, grpcurl via mise
 ```
 
 Mise only:
 
 ```sh
-./script/mise          # install mise, copy templates/mise/config.toml, run mise install
+./script/mise                    # install mise, copy templates/mise/config.toml, run mise install
 ./script/mise --no-tools
+./script/mise --with-k8s-tools    # optional: mise use -g ubi:txn2/kubefwd kubectl grpcurl
 ```
 
 SSH/GitHub account setup:
@@ -67,6 +69,7 @@ Relink only:
 
 - Package manager installs only base system tools and build prerequisites.
 - Mise installs runtimes/dev CLIs from `templates/mise/config.toml`: node, python, ruby, go, rust, java, erlang/elixir, neovim, helm, eza, gh, ripgrep, etc.
+- Optional k8s/gRPC CLIs are installed through mise, not Homebrew: `./script/mise --with-k8s-tools` runs `mise use -g ubi:txn2/kubefwd kubectl grpcurl`.
 - Shell startup activates mise through `topics/common/system/mise.zsh`.
 
 ## Ideas borrowed from holman/dotfiles

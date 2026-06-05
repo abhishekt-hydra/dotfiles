@@ -8,13 +8,17 @@ profile="${1:-auto}"
 install_mise=true
 install_tools=true
 copy_config=true
+install_optional_k8s_tools=false
 
 usage() {
   cat <<'EOF'
-Usage: ./script/mise [auto|common|macos|linux] [--no-install] [--no-tools] [--no-copy]
+Usage: ./script/mise [auto|common|macos|linux] [--no-install] [--no-tools] [--no-copy] [--with-k8s-tools]
 
 Installs mise if needed, copies templates/mise/config.toml to the global mise config,
 then runs `mise install` so mise installs all configured tools.
+
+Optional tool groups:
+  --with-k8s-tools  Install kubefwd, kubectl, and grpcurl through mise (not Homebrew).
 EOF
 }
 
@@ -29,6 +33,7 @@ while [[ $# -gt 0 ]]; do
     --no-install) install_mise=false ;;
     --no-tools) install_tools=false ;;
     --no-copy) copy_config=false ;;
+    --with-k8s-tools|--with-optional-tools) install_optional_k8s_tools=true ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; usage; exit 1 ;;
   esac
@@ -106,6 +111,18 @@ copy_mise_config() {
   echo "Copied mise config to $dst"
 }
 
+install_optional_k8s_tools() {
+  [[ "$install_optional_k8s_tools" == "true" ]] || return 0
+
+  if [[ "$install_tools" != "true" ]]; then
+    echo "Skipping optional k8s tools because --no-tools was used"
+    return 0
+  fi
+
+  echo "Installing optional k8s/gRPC tools through mise..."
+  mise use -g --yes ubi:txn2/kubefwd kubectl grpcurl
+}
+
 install_mise_tools() {
   [[ "$install_tools" == "true" ]] || return 0
 
@@ -115,6 +132,7 @@ install_mise_tools() {
 
 copy_mise_config
 install_mise_if_needed
+install_optional_k8s_tools
 install_mise_tools
 
 echo "mise setup complete."
