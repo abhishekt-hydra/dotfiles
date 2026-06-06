@@ -52,3 +52,16 @@ for file in ${(M)config_files:#*/completion.zsh}; do
 done
 
 unset config_files file dir _zshrc_file _dotfiles_candidate
+
+# opencode
+export PATH=/Users/abhishek/.opencode/bin:$PATH
+
+# Zellij: show stable pane identity in pane frame title.
+# Example: p3:Applications
+if [[ -n "${ZELLIJ_PANE_ID:-}" ]]; then
+  autoload -Uz add-zsh-hook
+  _zellij_update_pane_title() {
+    zellij action rename-pane "p${ZELLIJ_PANE_ID#terminal_}:${PWD##*/}" --pane-id "$ZELLIJ_PANE_ID" >/dev/null 2>&1
+  }
+  add-zsh-hook precmd _zellij_update_pane_title
+fi
