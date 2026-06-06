@@ -10,6 +10,14 @@ CYAN="#8be9fd"
 DARK="#111111"
 
 iface="en0"
+
+# Cache intervals in seconds. Keep expensive probes out of the 1s render path.
+RENDER_INTERVAL=1
+SYS_INTERVAL=3
+NET_INTERVAL=1
+DISK_INTERVAL=60
+BATT_INTERVAL=15
+
 now="$(/bin/date +%s)"
 cache_dir="${TMPDIR:-/tmp}/zellij-statusbar-${USER:-user}"
 render_cache="$cache_dir/rendered.cache"
@@ -24,7 +32,7 @@ file_mtime() {
 # second, only the first one does syscalls; the rest just print this file.
 if [[ -r "$render_cache" ]]; then
   render_mtime="$(file_mtime "$render_cache")"
-  if [[ "$render_mtime" =~ ^[0-9]+$ ]] && (( now == render_mtime )); then
+  if [[ "$render_mtime" =~ ^[0-9]+$ ]] && (( now - render_mtime < RENDER_INTERVAL )); then
     /bin/cat "$render_cache"
     exit 0
   fi
@@ -64,7 +72,7 @@ rate_fmt() {
   }'
 }
 
-# CPU + RAM cache: refresh every 3s.
+# CPU + RAM cache.
 sys_cache="$cache_dir/cpu-ram.cache"
 cpu="0"
 ram_used="?"
@@ -74,7 +82,7 @@ if [[ -r "$sys_cache" ]]; then
 else
   sys_t=0
 fi
-if ! [[ "${sys_t:-0}" =~ ^[0-9]+$ ]] || (( now - sys_t >= 3 )); then
+if ! [[ "${sys_t:-0}" =~ ^[0-9]+$ ]] || (( now - sys_t >= SYS_INTERVAL )); then
   cores="$(/usr/sbin/sysctl -n hw.ncpu 2>/dev/null || printf '1')"
   cpu="$(/bin/ps -A -o %cpu= 2>/dev/null | awk -v n="$cores" '{ s += $1 } END { if (n < 1) n = 1; printf "%.0f", s / n }')"
   cpu="${cpu:-0}"
@@ -94,7 +102,7 @@ if ! [[ "${sys_t:-0}" =~ ^[0-9]+$ ]] || (( now - sys_t >= 3 )); then
   printf '%s %s %s %s\n' "$now" "$cpu" "$ram_used" "$ram_total" > "$sys_cache.tmp" && /bin/mv "$sys_cache.tmp" "$sys_cache"
 fi
 
-# Network cache: refresh every 1s. Use only the <Link#...> row for en0 to avoid
+# Network cache. Use only the <Link#...> row for en0 to avoid
 # duplicate IPv4/IPv6 rows. Store previous rendered rates so sub-second calls do
 # not reset to 0 B/s.
 net_cache="$cache_dir/net-${iface}.cache"
@@ -107,11 +115,11 @@ if [[ -r "$net_cache" ]]; then
   read -r prev_t prev_in prev_out prev_down prev_up < "$net_cache" || true
   if [[ "${prev_t:-0}" =~ ^[0-9]+$ && "${prev_in:-0}" =~ ^[0-9]+$ && "${prev_out:-0}" =~ ^[0-9]+$ ]]; then
     dt=$(( now - prev_t ))
-    if (( dt > 0 && in_bytes >= prev_in && out_bytes >= prev_out )); then
+    if (( dt >= NET_INTERVAL && in_bytes >= prev_in && out_bytes >= prev_out )); then
       down_rate=$(( (in_bytes - prev_in) / dt ))
       up_rate=$(( (out_bytes - prev_out) / dt ))
       printf '%s %s %s %s %s\n' "$now" "$in_bytes" "$out_bytes" "$down_rate" "$up_rate" > "$net_cache.tmp" && /bin/mv "$net_cache.tmp" "$net_cache"
-    elif (( dt <= 0 )); then
+    elif (( dt < NET_INTERVAL )); then
       down_rate="${prev_down:-0}"
       up_rate="${prev_up:-0}"
     else
@@ -126,21 +134,23 @@ fi
 down="$(rate_fmt "$down_rate")"
 up="$(rate_fmt "$up_rate")"
 
-# Disk cache: refresh every 60s.
+# Disk cache.
 disk_cache="$cache_dir/disk.cache"
-disk="?Gi/?Gi"
+disk="SSD ?Gi free"
 if [[ -r "$disk_cache" ]]; then
   read -r disk_t disk < "$disk_cache" || true
 else
   disk_t=0
 fi
-if ! [[ "${disk_t:-0}" =~ ^[0-9]+$ ]] || (( now - disk_t >= 60 )); then
-  disk="$(/bin/df -g / 2>/dev/null | awk 'NR == 2 { printf "%sGi/%sGi (%s)", $4, $2, $5 }')"
-  disk="${disk:-?Gi/?Gi}"
+if ! [[ "${disk_t:-0}" =~ ^[0-9]+$ ]] || (( now - disk_t >= DISK_INTERVAL )); then
+  disk_path="/"
+  [[ -d /System/Volumes/Data ]] && disk_path="/System/Volumes/Data"
+  disk="$(/bin/df -g "$disk_path" 2>/dev/null | awk 'NR == 2 { printf "SSD %sGi free", $4 }')"
+  disk="${disk:-SSD ?Gi free}"
   printf '%s %s\n' "$now" "$disk" > "$disk_cache.tmp" && /bin/mv "$disk_cache.tmp" "$disk_cache"
 fi
 
-# Battery cache: refresh every 15s.
+# Battery cache.
 batt_cache="$cache_dir/battery.cache"
 batt="AC"
 if [[ -r "$batt_cache" ]]; then
@@ -148,7 +158,7 @@ if [[ -r "$batt_cache" ]]; then
 else
   batt_t=0
 fi
-if ! [[ "${batt_t:-0}" =~ ^[0-9]+$ ]] || (( now - batt_t >= 15 )); then
+if ! [[ "${batt_t:-0}" =~ ^[0-9]+$ ]] || (( now - batt_t >= BATT_INTERVAL )); then
   batt="$(/usr/bin/pmset -g batt 2>/dev/null | /usr/bin/grep -Eo '[0-9]+%' | /usr/bin/head -1)"
   batt="${batt:-AC}"
   printf '%s %s\n' "$now" "$batt" > "$batt_cache.tmp" && /bin/mv "$batt_cache.tmp" "$batt_cache"
@@ -163,7 +173,7 @@ bar="$({
   printf '#[fg=%s,bg=%s,bold] [%s] ↓  %s • ↑  %s ' "$DARK" "$CYAN" "$iface" "$down" "$up"
   printf '#[fg=%s,bg=%s,bold] %s ' "$ORANGE" "$BG" "$disk"
   printf '#[fg=%s,bg=%s,bold] %s ' "$ORANGE" "$BG" "$clock"
-  printf '#[fg=%s,bg=%s,bold] ♥%s ' "$ORANGE" "$BG" "$batt"
+  printf '#[fg=%s,bg=%s,bold] ♥ %s ' "$ORANGE" "$BG" "$batt"
 })"
 
 printf '%s' "$bar" > "$render_cache.tmp" && /bin/mv "$render_cache.tmp" "$render_cache"
