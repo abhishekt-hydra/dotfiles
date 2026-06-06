@@ -1,0 +1,36 @@
+layout {
+    pane size=1 borderless=true {
+        plugin location="tab-bar"
+    }
+
+    pane split_direction="vertical" {
+        pane
+    }
+
+    // Small built-in Zellij command/status bar (brief key hints).
+    pane size=1 borderless=true {
+        plugin location="status-bar"
+    }
+
+    // Custom system metrics bar.
+    pane size=1 borderless=true {
+        plugin location="file:/Users/abhishek/.config/zellij/plugins/zjstatus.wasm" {
+            format_left   "#[fg=#ffb86c,bg=#111111,bold] SYS {command_sysbar}"
+            format_center ""
+            format_right  ""
+            format_space  "#[bg=#111111]"
+
+            border_enabled  "false"
+            border_char     "─"
+            border_format   "#[fg=#3d4056]{char}"
+            border_position "top"
+
+            hide_frame_for_single_pane "false"
+
+            command_sysbar_command    "/Users/abhishek/.config/zellij/scripts/statusbar.sh"
+            command_sysbar_format     "{stdout}"
+            command_sysbar_interval   "1"
+            command_sysbar_rendermode "dynamic"
+        }
+    }
+}
