@@ -46,9 +46,36 @@ big() {
 alias rsync="rsync -Pav"
 
 brewup() {
-  brew update && brew upgrade && command -v claude >/dev/null 2>&1 && claude update
+  arch -arm64 /opt/homebrew/bin/brew update && \
+    arch -arm64 /opt/homebrew/bin/brew upgrade && \
+    command -v claude >/dev/null 2>&1 && claude update
 }
 
 # QMD: force CPU mode to avoid local Metal/node-llama-cpp crashes.
 export QMD_FORCE_CPU=1
 alias qmdmcp="QMD_FORCE_CPU=1 qmd mcp --http --daemon"
+
+# Create a GitHub PR from the current branch to staging.
+# Usage: prstaging [custom body]
+# Defaults title to the latest commit subject and body to the latest commit message.
+prstaging() {
+  local branch title body
+  branch="$(git branch --show-current)" || return
+  if [[ -z "$branch" ]]; then
+    echo "prstaging: not on a branch"
+    return 1
+  fi
+
+  title="$(git log -1 --pretty=%s)" || return
+  body="$*"
+  if [[ -z "$body" ]]; then
+    body="$(git log -1 --pretty=%B)" || return
+  fi
+
+  gh auth switch --hostname github.com --user abhishekt-hydra || return
+  git push -u origin "$branch" || return
+  gh pr create --base staging --head "$branch" --title "$title" --body "$body"
+}
+
+alias pr=prstaging
+export HOMEBREW_NO_AUTO_UPDATE=1
