@@ -17,7 +17,7 @@ layout {
             plugin location="file:/Users/abhishek/.config/zellij/plugins/zjstatus.wasm" {
                 format_left   ""
                 format_center ""
-                format_right  "{command_sysbar}"
+                format_right  "{pipe_sysbar}{datetime}"
                 format_space  "#[bg=#111111]"
 
                 border_enabled  "false"
@@ -27,10 +27,15 @@ layout {
 
                 hide_frame_for_single_pane "false"
 
-                command_sysbar_command    "/Users/abhishek/.config/zellij/scripts/statusbar.sh"
-                command_sysbar_format     "{stdout}"
-                command_sysbar_interval   "1"
-                command_sysbar_rendermode "dynamic"
+                // Metrics are pushed by zsysbar-daemon via:
+                //   zellij pipe --name pipe_sysbar -- "<formatted string>"
+                // No command is spawned by zellij for this widget.
+                pipe_sysbar_format     "#[fg=#ffb86c,bg=#111111,bold] {output} "
+                pipe_sysbar_rendermode "dynamic"
+
+                // Clock rendered by the plugin itself (no shell-out).
+                datetime          "#[fg=#ffb86c,bg=#111111,bold] {format} "
+                datetime_format   "%Y-%m-%d %H:%M:%S"
             }
         }
     }
