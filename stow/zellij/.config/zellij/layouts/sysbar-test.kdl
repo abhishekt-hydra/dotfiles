@@ -1,0 +1,46 @@
+// Default layout: collapsed native Zellij shortcuts on the left,
+// daemon-fed zjstatus sysbar on the right.
+// Left is intentionally tiny so the native status-bar renders its minimal `...`
+// form by default; right takes the remaining width for CPU/MEM/NET/DISK/BAT/time.
+// Launch/test with: zellij --layout sysbar-test
+layout {
+    pane size=1 borderless=true {
+        plugin location="tab-bar"
+    }
+
+    pane split_direction="vertical" {
+        pane
+    }
+
+    // Single bottom row: left = collapsed native shortcuts, right = flexible sysbar.
+    pane size=1 split_direction="vertical" {
+        pane size=3 borderless=true {
+            plugin location="zellij:status-bar"
+        }
+
+        pane borderless=true {
+            plugin location="file:/Users/abhishek/.config/zellij/plugins/zjstatus.wasm" {
+                format_left   ""
+                format_center ""
+                format_right  "{pipe_sysbar} {datetime}"
+                format_space  "#[bg=#111111]"
+
+                border_enabled  "false"
+                border_char     "─"
+                border_format   "#[fg=#3d4056]{char}"
+                border_position "top"
+
+                hide_frame_for_single_pane "false"
+
+                // zsysbar-daemon publishes metrics to each live session with:
+                //   ZELLIJ_SESSION_NAME=<session> zellij pipe --name pipe_sysbar -- "CPU ..."
+                pipe_sysbar_format     "#[fg=#ffb86c,bg=#111111,bold]{output}"
+                pipe_sysbar_rendermode "dynamic"
+
+                datetime        "#[fg=#ffb86c,bg=#111111,bold]{format}"
+                datetime_format "%Y %m %d %H %M %S"
+                datetime_rendermode "dynamic"
+            }
+        }
+    }
+}
