@@ -1,4 +1,8 @@
 [tools]
+# Devtools
+hurl = "8.0.1"
+
+# Runtimes and CLIs
 detox = "latest"
 eza = "latest"
 elixir = "1.19.5"

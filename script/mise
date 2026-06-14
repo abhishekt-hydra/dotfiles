@@ -8,14 +8,18 @@ profile="${1:-auto}"
 install_mise=true
 install_tools=true
 copy_config=true
+install_devtools=true
 install_optional_k8s_tools=false
 
 usage() {
   cat <<'EOF'
-Usage: ./script/mise [auto|common|macos|linux] [--no-install] [--no-tools] [--no-copy] [--with-k8s-tools]
+Usage: ./script/mise [auto|common|macos|linux] [--no-install] [--no-tools] [--no-copy] [--no-devtools] [--with-k8s-tools]
 
 Installs mise if needed, copies templates/mise/config.toml to the global mise config,
 then runs `mise install` so mise installs all configured tools.
+
+Dev tools:
+  hurl@8.0.1 is installed through `mise use -g hurl@8.0.1`.
 
 Optional tool groups:
   --with-k8s-tools  Install kubefwd, kubectl, and grpcurl through mise (not Homebrew).
@@ -33,6 +37,7 @@ while [[ $# -gt 0 ]]; do
     --no-install) install_mise=false ;;
     --no-tools) install_tools=false ;;
     --no-copy) copy_config=false ;;
+    --no-devtools) install_devtools=false ;;
     --with-k8s-tools|--with-optional-tools) install_optional_k8s_tools=true ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; usage; exit 1 ;;
@@ -111,6 +116,18 @@ copy_mise_config() {
   echo "Copied mise config to $dst"
 }
 
+install_devtools() {
+  [[ "$install_devtools" == "true" ]] || return 0
+
+  if [[ "$install_tools" != "true" ]]; then
+    echo "Skipping dev tools because --no-tools was used"
+    return 0
+  fi
+
+  echo "Installing dev tools through mise..."
+  mise use -g --yes hurl@8.0.1
+}
+
 install_optional_k8s_tools() {
   [[ "$install_optional_k8s_tools" == "true" ]] || return 0
 
@@ -132,6 +149,7 @@ install_mise_tools() {
 
 copy_mise_config
 install_mise_if_needed
+install_devtools
 install_optional_k8s_tools
 install_mise_tools
 
