@@ -3,8 +3,7 @@ typeset -U path PATH
 
 for dir in \
   "$HOME/.bun/bin" \
-  "$HOME/.fly/bin" \
-  "$HOME/.codeium/windsurf/bin"
+  "$HOME/.fly/bin"
 do
   [[ -d "$dir" ]] && path=("$dir" $path)
 done

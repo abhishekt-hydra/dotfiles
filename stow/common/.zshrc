@@ -66,3 +66,4 @@ if [[ -n "${ZELLIJ_PANE_ID:-}" ]]; then
   add-zsh-hook precmd _zellij_update_pane_title
 fi
 ulimit -n 65536
+export PATH="/Users/abhishek/.evotai/bin:$PATH"

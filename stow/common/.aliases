@@ -52,8 +52,8 @@ brewup() {
 }
 
 # QMD: force CPU mode to avoid local Metal/node-llama-cpp crashes.
-export QMD_FORCE_CPU=1
-alias qmdmcp="QMD_FORCE_CPU=1 qmd mcp --http --daemon"
+# export QMD_FORCE_CPU=1
+# alias qmdmcp="QMD_FORCE_CPU=1 qmd mcp --http --daemon"
 
 # Create a GitHub PR from the current branch to staging.
 # Usage: prstaging [custom body]
