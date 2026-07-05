@@ -345,7 +345,9 @@ default_mode "normal"
 // The name of the default layout to load on startup
 // Default: "default"
 // 
-default_layout "sysbar-test"
+// Disabled 2026-06-30: sysbar-test loads zjstatus + zsysbar-daemon pipe status,
+// which was causing repeated Zellij CliPipe timeouts.
+// default_layout "sysbar-test"
  
 // The folder in which Zellij will look for layouts
 // (Requires restart)

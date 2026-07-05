@@ -65,5 +65,7 @@ if [[ -n "${ZELLIJ_PANE_ID:-}" ]]; then
   }
   add-zsh-hook precmd _zellij_update_pane_title
 fi
-ulimit -n 65536
+# Raise per-shell open-file limit. macOS currently reports kern.maxfilesperproc=92160;
+# fall back if a parent process has a lower hard limit.
+ulimit -n 92160 2>/dev/null || ulimit -n 65536 2>/dev/null || true
 export PATH="/Users/abhishek/.evotai/bin:$PATH"
