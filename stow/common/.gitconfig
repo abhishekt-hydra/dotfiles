@@ -30,3 +30,5 @@
     st = status --short --branch
     pl = pull
     lg = log --graph --pretty=format:'%C(yellow)%h%Creset %Cgreen(%cr)%Creset %C(bold blue)<%an>%Creset %s%C(auto)%d%Creset' --abbrev-commit
+[url "git@github.com-personal:TwistingTwists/rs-graphblas"]
+	insteadOf = https://github.com/TwistingTwists/rs-graphblas

@@ -79,3 +79,6 @@ prstaging() {
 
 alias pr=prstaging
 export HOMEBREW_NO_AUTO_UPDATE=1
+
+
+alias rcpy="rclone copy  -P --transfers 8 "
