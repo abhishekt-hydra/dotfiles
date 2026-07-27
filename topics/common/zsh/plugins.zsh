@@ -9,11 +9,16 @@ fi
 if [[ -r "$ZINIT_HOME/zinit.zsh" ]]; then
   source "$ZINIT_HOME/zinit.zsh"
 
+  # Powerlevel10k. Its gitstatusd daemon keeps a persistent per-repo index, so
+  # the prompt stays responsive in large trees (node_modules/target/vendor)
+  # where walking the worktree for git state would stall.
+  zinit ice depth=1
+  zinit light romkatv/powerlevel10k
+
   # Oh My Zsh libs we use, without loading all of OMZ.
   zinit snippet OMZL::git.zsh
   zinit snippet OMZL::directories.zsh
   zinit snippet OMZL::theme-and-appearance.zsh
-  zinit snippet OMZL::async_prompt.zsh
 
   # eza config: set before loading OMZ eza plugin.
   zstyle ':omz:plugins:eza' 'dirs-first' yes

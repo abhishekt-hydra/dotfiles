@@ -1,5 +1,14 @@
 # Managed by dotfiles. Local/private settings can go in ~/.localrc.
 
+# Powerlevel10k instant prompt: repaints a cached prompt before the rest of this
+# file runs. Must stay at the very top -- it has to win the race against any
+# output below. `quiet` because the zinit bootstrap clone prints on first run of
+# a fresh machine, which would otherwise trip the console-output warning.
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
 # Resolve repo path from the stowed ~/.zshrc symlink when possible.
 if [[ -z "${DOTFILES:-}" ]]; then
   _zshrc_file="${${(%):-%N}:A}"
@@ -82,3 +91,7 @@ export PATH="/Users/abhishek/.evotai/bin:$PATH"
 # `compinit -C` reused a stale dump and never registered _grok.
 export PATH="$HOME/.grok/bin:$PATH"
 # <<< grok installer <<<
+
+# Powerlevel10k appearance (hand-authored, not `p10k configure` output -- see the
+# header in that file). Sourced last so it overrides anything the OMZ snippets set.
+[[ -r "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"
