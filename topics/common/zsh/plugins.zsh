@@ -7,6 +7,12 @@ if [[ ! -d "$ZINIT_HOME/.git" ]] && command -v git >/dev/null 2>&1; then
 fi
 
 if [[ -r "$ZINIT_HOME/zinit.zsh" ]]; then
+  # Suppress zinit's `zpl`/`zplg`/`zi`/`zini` shorthands. `zi` in particular
+  # would shadow zoxide's interactive picker, since zsh resolves aliases before
+  # functions. Must be set before sourcing; zinit merges any pre-existing keys.
+  typeset -gA ZINIT
+  ZINIT[NO_ALIASES]=1
+
   source "$ZINIT_HOME/zinit.zsh"
 
   # Powerlevel10k. Its gitstatusd daemon keeps a persistent per-repo index, so
