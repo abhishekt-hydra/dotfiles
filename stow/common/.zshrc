@@ -44,6 +44,10 @@ for file in ${${config_files:#*/path.zsh}:#*/completion.zsh}; do
   source "$file"
 done
 
+# Completion dirs from installers that append below must be on fpath before
+# compinit runs, or their _* functions never make it into the dump.
+fpath=(~/.grok/completions/zsh $fpath)
+
 # completion.zsh last.
 autoload -Uz compinit
 compinit
@@ -69,3 +73,12 @@ fi
 # fall back if a parent process has a lower hard limit.
 ulimit -n 92160 2>/dev/null || ulimit -n 65536 2>/dev/null || true
 export PATH="/Users/abhishek/.evotai/bin:$PATH"
+
+# bun completions
+[ -s "/Users/abhishek/.bun/_bun" ] && source "/Users/abhishek/.bun/_bun"
+
+# >>> grok installer >>>
+# fpath entry and compinit hoisted above; the installer's trailing
+# `compinit -C` reused a stale dump and never registered _grok.
+export PATH="$HOME/.grok/bin:$PATH"
+# <<< grok installer <<<
