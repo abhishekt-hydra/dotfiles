@@ -1,5 +1,6 @@
 window-theme = system
-theme = dark:Catppuccin Macchiato,light:Catppuccin Latte
+theme = dark:Gruvbox Dark Hard,light:Gruvbox Light Hard
+minimum-contrast = 3
 font-family = "DepartureMono Nerd Font"
 copy-on-select = false
 clipboard-trim-trailing-spaces = false
