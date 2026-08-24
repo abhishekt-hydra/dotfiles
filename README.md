@@ -83,3 +83,19 @@ Relink only:
 - Private config lives outside git in `~/.localrc` and `~/.gitconfig.local`.
 
 Symlinking is handled by GNU Stow so nested configs like `.config/nvim` are easy later.
+
+## macOS lid-closed caffeinate
+
+`topics/macos/system/caffeinate-lid.zsh` extends `caffeinate -d`: it prevents
+the Mac itself from sleeping while the display-awake hold is active, restores
+the former setting after the final concurrent holder exits, and reaps stale
+holders at the next prompt. Other `caffeinate` invocations are unchanged.
+
+It uses `sudo -n /usr/bin/pmset`, so add an appropriately scoped passwordless
+sudoers rule for `/usr/bin/pmset` before relying on lid-closed operation. If
+that rule is missing, it warns and runs standard `caffeinate` without changing
+the sleep setting. An optional app at
+`~/Library/Application Support/CaffeinateLid/CaffeinateLid.app` receives the
+holder-directory path to show a menu-bar indicator. Optional `hotspot` and
+`hotspot_leave` shell functions join a hotspot while a lid-safe hold is active
+and restore the prior network once the last holder exits.
