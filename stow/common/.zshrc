@@ -86,12 +86,21 @@ export PATH="/Users/abhishek/.evotai/bin:$PATH"
 # bun completions
 [ -s "/Users/abhishek/.bun/_bun" ] && source "/Users/abhishek/.bun/_bun"
 
-# >>> grok installer >>>
-# fpath entry and compinit hoisted above; the installer's trailing
-# `compinit -C` reused a stale dump and never registered _grok.
-export PATH="$HOME/.grok/bin:$PATH"
-# <<< grok installer <<<
 
 # Powerlevel10k appearance (hand-authored, not `p10k configure` output -- see the
 # header in that file). Sourced last so it overrides anything the OMZ snippets set.
 [[ -r "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"
+
+[ -f ~/.fly_profiles.sh ] && . ~/.fly_profiles.sh
+
+# >>> grok installer >>>
+export PATH="$HOME/.grok/bin:$PATH"
+fpath=(~/.grok/completions/zsh $fpath)
+autoload -Uz compinit && compinit -C
+# <<< grok installer <<<
+
+# Added by cua-driver-rs installer — see https://github.com/trycua/cua
+export PATH="/Users/abhishek/.local/bin:$PATH"
+
+# Turso
+export PATH="$PATH:/Users/abhishek/.turso"

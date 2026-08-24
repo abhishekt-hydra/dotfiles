@@ -82,3 +82,13 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 
 
 alias rcpy="rclone copy  -P --transfers 8 "
+
+# oxmgr -- process manager for the local services, replaced PM2 on 2026-07-31.
+# It's a *local* npm install under ~/Applications/oxmgr, so its shim is not on
+# PATH by default. Appended rather than prepended: this is a node_modules/.bin
+# dir, and anything installed there later shouldn't shadow system binaries.
+# `typeset -U path PATH` from topics/common/system/path.zsh keeps it deduped.
+# Services + rollback notes: ~/Applications/oxmgr/MIGRATION.md
+[[ -d "$HOME/Applications/oxmgr/node_modules/.bin" ]] &&
+  path+=("$HOME/Applications/oxmgr/node_modules/.bin")
+export PATH
