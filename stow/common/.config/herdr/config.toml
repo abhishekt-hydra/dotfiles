@@ -1,0 +1,40 @@
+onboarding = false
+
+[ui]
+show_agent_labels_on_pane_borders = true
+
+agent_panel_sort = "spaces"
+[ui.toast]
+delivery = "system"
+
+[theme]
+name = "one-dark"
+auto_switch = false
+
+[ui.sound]
+enabled = true
+done_path = "sounds/done.mp3"
+request_path = "sounds/request.mp3"
+[[keys.command]]
+key = "prefix+e"
+type = "plugin_action"
+command = "chmarax.herdr-nvim.toggle"
+description = "nvim sidebar"
+
+[[keys.command]]
+key = "prefix+o"
+type = "plugin_action"
+command = "chmarax.herdr-nvim.pick-file"
+description = "open file from agent output"
+
+# Move the focused pane out into a new tab (ctrl+b then shift+M)
+[[keys.command]]
+key = "prefix+shift+m"
+type = "shell"
+command = "/Users/abhishek/.config/herdr/move-pane-to-new-tab.sh"
+
+[[keys.command]]
+key = "prefix+t"
+type = "plugin_action"
+command = "herdr-navigator.open"
+description = "jump to anything"
