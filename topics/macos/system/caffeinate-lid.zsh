@@ -1,8 +1,9 @@
 # Keep macOS awake with the lid closed when `caffeinate -d` is used.
 #
-# Requires a sudoers rule permitting this user to run /usr/bin/pmset without a
-# password. The optional CaffeinateLid menu-bar app and `hotspot` helpers are
-# discovered at runtime; neither is required for ordinary caffeinate use.
+# Prompts once with `sudo -v` before changing pmset, then refreshes that
+# authorization while the hold runs so cleanup can restore the prior state.
+# The optional CaffeinateLid menu-bar app and `hotspot` helpers are discovered
+# at runtime; neither is required for ordinary caffeinate use.
 
 typeset -g CAFFEINATE_LID_DIR="${TMPDIR:-/tmp}/caffeinate-lid.$UID"
 typeset -g CAFFEINATE_LID_APP="$HOME/Library/Application Support/CaffeinateLid/CaffeinateLid.app"
@@ -136,31 +137,77 @@ _caffeinate_lid_join_hotspot() {
   hotspot
 }
 
+# macOS sudo credentials normally expire after a few minutes. Refresh the
+# already-authorized timestamp without ever prompting in this background loop;
+# the foreground `sudo -v` below is the sole password prompt.
+_caffeinate_lid_keep_sudo_alive() {
+  while sleep 60; do
+    sudo -n -v || return 0
+  done
+}
+
+# Turn the displays off once when the lid closes. This does not sleep the
+# system, so the caffeinated workload continues running.
+_caffeinate_lid_watch_display() {
+  local state previous=No
+  while sleep 1; do
+    state="$(/usr/sbin/ioreg -r -k AppleClamshellState -d 4 |
+      /usr/bin/awk '/AppleClamshellState/ { print $NF; exit }')"
+    if [[ "$state" == Yes && "$previous" != Yes ]]; then
+      /usr/bin/pmset displaysleepnow
+    fi
+    previous="$state"
+  done
+}
+
 caffeinate() {
-  local arg lid=0
+  local arg cleaned lid=0 options=1 token sudo_keepalive_pid display_watcher_pid
+  local -a native_args
   for arg in "$@"; do
-    [[ "$arg" == -- ]] && break
-    if [[ "$arg" == -* && "$arg" != --* && "${arg#-}" == *d* ]]; then
+    if (( options )) && [[ "$arg" == -- ]]; then
+      options=0
+      native_args+=("$arg")
+      continue
+    fi
+    if (( options )) && [[ "$arg" == -* && "$arg" != --* && "${arg#-}" == *d* ]]; then
       lid=1
-      break
+      cleaned="${arg#-}"
+      cleaned="${cleaned//d/}"
+      [[ -n "$cleaned" ]] && native_args+=("-$cleaned")
+    else
+      native_args+=("$arg")
     fi
   done
 
   (( lid )) || { command /usr/bin/caffeinate "$@"; return }
 
-  local token="$$.$RANDOM$RANDOM"
-  if ! _caffeinate_lid_acquire "$token"; then
-    print -u2 'caffeinate: could not disable lid sleep; continuing without it'
-    command /usr/bin/caffeinate "$@"
+  if ! sudo -v; then
+    print -u2 'caffeinate: sudo authentication failed; continuing without lid sleep prevention'
+    command /usr/bin/caffeinate "${native_args[@]}"
     return
   fi
 
-  print -u2 'caffeinate: lid sleep disabled — restores when this exits'
+  token="$$.$RANDOM$RANDOM"
+  if ! _caffeinate_lid_acquire "$token"; then
+    print -u2 'caffeinate: could not disable lid sleep; continuing without it'
+    command /usr/bin/caffeinate "${native_args[@]}"
+    return
+  fi
+
+  _caffeinate_lid_keep_sudo_alive &
+  sudo_keepalive_pid=$!
+  _caffeinate_lid_watch_display &
+  display_watcher_pid=$!
+  print -u2 'caffeinate: lid sleep disabled; display will turn off when lid closes — restores when this exits'
   # Pin sleep first, then travel. A hotspot failure never blocks caffeinate.
   _caffeinate_lid_join_hotspot || print -u2 'caffeinate: hotspot join failed; continuing on current network'
   {
-    command /usr/bin/caffeinate "$@"
+    command /usr/bin/caffeinate "${native_args[@]}"
   } always {
+    kill "$display_watcher_pid" 2>/dev/null || true
+    wait "$display_watcher_pid" 2>/dev/null || true
+    kill "$sudo_keepalive_pid" 2>/dev/null || true
+    wait "$sudo_keepalive_pid" 2>/dev/null || true
     _caffeinate_lid_release "$token"
   }
 }
