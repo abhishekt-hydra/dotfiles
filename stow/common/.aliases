@@ -46,9 +46,20 @@ big() {
 alias rsync="rsync -Pav"
 
 brewup() {
+  local brewup_rc=0
+
   arch -arm64 /opt/homebrew/bin/brew update && \
-    arch -arm64 /opt/homebrew/bin/brew upgrade && \
-    command -v claude >/dev/null 2>&1 && claude update
+    arch -arm64 /opt/homebrew/bin/brew upgrade || brewup_rc=$?
+
+  if command -v claude >/dev/null 2>&1; then
+    claude update || brewup_rc=$?
+  fi
+
+  mise upgrade github:ogulcancelik/herdr --minimum-release-age 0s || brewup_rc=$?
+  prodex update || brewup_rc=$?
+  npm install --global @openai/codex@latest || brewup_rc=$?
+
+  return "$brewup_rc"
 }
 
 # QMD: force CPU mode to avoid local Metal/node-llama-cpp crashes.
@@ -82,6 +93,11 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 
 
 alias rcpy="rclone copy  -P --transfers 8 "
+
+# Prodex: use real codex binary, not the mise shim (shim resolves to
+# ~/.local/bin/mise and fails version check). ~/.local/bin/codex is the
+# npm install (0.153.4), stable across mise/node upgrades.
+export PRODEX_CODEX_BIN="$HOME/.local/bin/codex"
 
 # oxmgr -- process manager for the local services, replaced PM2 on 2026-07-31.
 # It's a *local* npm install under ~/Applications/oxmgr, so its shim is not on

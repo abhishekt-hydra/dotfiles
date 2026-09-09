@@ -5,3 +5,5 @@
 *.backup
 .env
 .localrc
+
+__pycache__/

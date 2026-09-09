@@ -15,7 +15,7 @@ usage() {
   cat <<'EOF'
 Usage: ./script/mise [auto|common|macos|linux] [--no-install] [--no-tools] [--no-copy] [--no-devtools] [--with-k8s-tools]
 
-Installs mise if needed, copies templates/mise/config.toml to the global mise config,
+Installs mise if needed, seeds templates/mise/config.toml to the global mise config,
 then runs `mise install` so mise installs all configured tools.
 
 Dev tools:
@@ -101,15 +101,9 @@ copy_mise_config() {
 
   mkdir -p "$(dirname "$dst")"
 
-  if [[ -e "$dst" ]]; then
-    if cmp -s "$src" "$dst"; then
-      echo "mise config already up to date: $dst"
-      return 0
-    fi
-
-    local backup="$dst.backup.$(date +%Y%m%d%H%M%S)"
-    cp "$dst" "$backup"
-    echo "Backed up existing mise config to $backup"
+  if [[ -e "$dst" || -L "$dst" ]]; then
+    echo "Preserving existing mise config: $dst"
+    return 0
   fi
 
   install -m 0644 "$src" "$dst"

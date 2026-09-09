@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# A bounded tmux status widget.  Every client may execute this script, but a
-# shared cache and mkdir lock ensure that only one invocation samples the
-# interface counters for each refresh interval.
+# A bounded tmux status widget. Every client may execute this script, but a
+# shared cache and mkdir lock ensure only one invocation samples counters per
+# refresh interval. Supports macOS and Linux without optional packages.
 
 readonly REFRESH_SECONDS=2
 readonly CACHE_DIR="${TMPDIR:-/tmp}/tmux-network-speed-${UID:-$(id -u)}"
@@ -34,7 +34,7 @@ release_lock() {
 
 acquire_lock() {
   if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-    # Recover only a lock whose recorded owner is no longer alive.  This keeps
+    # Recover only a lock whose recorded owner is no longer alive. This keeps
     # a crashed status command from freezing the display indefinitely.
     local owner_pid
     if [[ -r "$LOCK_DIR/pid" ]]; then
@@ -75,6 +75,28 @@ human_rate() {
   '
 }
 
+default_interface() {
+  if command -v ip >/dev/null 2>&1; then
+    ip -4 route show default 2>/dev/null | awk 'NR == 1 { print $5; exit }'
+  else
+    route -n get default 2>/dev/null | awk '/interface: / { print $2; exit }'
+  fi
+}
+
+interface_counters() {
+  local interface="$1"
+  if [[ -r "/sys/class/net/$interface/statistics/rx_bytes" ]]; then
+    paste -d ' ' \
+      "/sys/class/net/$interface/statistics/rx_bytes" \
+      "/sys/class/net/$interface/statistics/tx_bytes"
+  else
+    netstat -nbI "$interface" 2>/dev/null | awk '
+      $7 ~ /^[0-9]+$/ && $10 ~ /^[0-9]+$/ { rx = $7; tx = $10 }
+      END { if (rx != "" && tx != "") print rx, tx }
+    '
+  fi
+}
+
 main() {
   local now interface counters rx tx last_timestamp last_rx last_tx elapsed
   local download upload display state_tmp cache_tmp
@@ -100,7 +122,7 @@ main() {
 
   interface=$(tmux show-option -gqv '@dracula-network-bandwidth')
   if [[ -z "$interface" ]]; then
-    interface=$(route -n get default 2>/dev/null | awk '/interface: / { print $2; exit }')
+    interface=$(default_interface)
   fi
 
   if [[ -z "$interface" ]]; then
@@ -108,10 +130,7 @@ main() {
     return
   fi
 
-  counters=$(netstat -nbI "$interface" 2>/dev/null | awk '
-    $7 ~ /^[0-9]+$/ && $10 ~ /^[0-9]+$/ { rx = $7; tx = $10 }
-    END { if (rx != "" && tx != "") print rx, tx }
-  ')
+  counters=$(interface_counters "$interface")
   read -r rx tx <<< "$counters"
   if [[ ! "$rx" =~ ^[0-9]+$ || ! "$tx" =~ ^[0-9]+$ ]]; then
     print_cached

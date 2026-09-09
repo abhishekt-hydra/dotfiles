@@ -9,12 +9,19 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-# Resolve repo path from the stowed ~/.zshrc symlink when possible.
+# Resolve the checkout from the machine-local pointer installed by script/link.
 if [[ -z "${DOTFILES:-}" ]]; then
   _zshrc_file="${${(%):-%N}:A}"
   _dotfiles_candidate="${_zshrc_file:h:h:h}"
 
-  if [[ -d "$_dotfiles_candidate/topics" ]]; then
+  _dotfiles_root_file="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/root"
+  if [[ -r "$_dotfiles_root_file" ]]; then
+    _dotfiles_root="$(<"$_dotfiles_root_file")"
+  fi
+
+  if [[ -n "${_dotfiles_root:-}" && -d "$_dotfiles_root/topics" ]]; then
+    export DOTFILES="$_dotfiles_root"
+  elif [[ -d "$_dotfiles_candidate/topics" ]]; then
     export DOTFILES="$_dotfiles_candidate"
   elif [[ -d "$HOME/dotfiles/topics" ]]; then
     export DOTFILES="$HOME/dotfiles"
@@ -64,7 +71,7 @@ for file in ${(M)config_files:#*/completion.zsh}; do
   source "$file"
 done
 
-unset config_files file dir _zshrc_file _dotfiles_candidate
+unset config_files file dir _zshrc_file _dotfiles_candidate _dotfiles_root_file _dotfiles_root
 
 # opencode
 export PATH=/Users/abhishek/.opencode/bin:$PATH
@@ -104,3 +111,6 @@ export PATH="/Users/abhishek/.local/bin:$PATH"
 
 # Turso
 export PATH="$PATH:/Users/abhishek/.turso"
+
+# AgentField CLI
+export PATH="/Users/abhishek/.agentfield/bin:$PATH"

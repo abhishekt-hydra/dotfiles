@@ -17,8 +17,8 @@ libssl-dev
 libyaml-dev
 openssh-client
 pkg-config
+python3
 rsync
-stow
 tar
 tmux
 unzip

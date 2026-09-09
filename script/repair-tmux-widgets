@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Copy the tmux configuration and its custom status widgets to a remote host,
+# then reload or validate the configuration there.
+
+set -euo pipefail
+
+target="${1:-aws-xlarge}"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+dotfiles_root="$(cd -- "$script_dir/.." && pwd)"
+config="$dotfiles_root/stow/common/.tmux.conf"
+widget_dir="$dotfiles_root/stow/common/.tmux"
+
+for file in "$config" "$widget_dir/disk_space.sh" "$widget_dir/network_speed.sh"; do
+  [[ -f "$file" ]] || { echo "required file is missing: $file" >&2; exit 1; }
+done
+
+echo "Copying tmux configuration and widgets to $target..."
+ssh "$target" 'mkdir -p "$HOME/.tmux"'
+scp "$config" "$target:~/.tmux.conf"
+scp "$widget_dir/disk_space.sh" "$widget_dir/network_speed.sh" "$target:~/.tmux/"
+
+ssh "$target" 'bash -s' <<'REMOTE'
+set -euo pipefail
+
+chmod 755 "$HOME/.tmux/disk_space.sh" "$HOME/.tmux/network_speed.sh"
+mkdir -p "$HOME/.tmux/plugins/tmux/scripts"
+ln -sfn "$HOME/.tmux/network_speed.sh" "$HOME/.tmux/plugins/tmux/scripts/network_speed.sh"
+ln -sfn "$HOME/.tmux/disk_space.sh" "$HOME/.tmux/plugins/tmux/scripts/disk_space.sh"
+
+if tmux list-sessions >/dev/null 2>&1; then
+  tmux source-file "$HOME/.tmux.conf"
+else
+  socket="codex-tmux-config-verify-$$"
+  tmux -L "$socket" -f "$HOME/.tmux.conf" new-session -d -s config-verify
+  tmux -L "$socket" kill-server
+fi
+
+printf 'disk: '
+"$HOME/.tmux/disk_space.sh"
+printf '\nnetwork: '
+"$HOME/.tmux/network_speed.sh"
+printf '\ntmux configuration and widgets are healthy.\n'
+REMOTE

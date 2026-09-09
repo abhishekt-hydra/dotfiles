@@ -1,19 +1,21 @@
 # dotfiles
 
-Cross-platform dotfiles for macOS and Linux.
+Cross-platform dotfiles for macOS and Linux, managed by **mise bootstrap**
+(2026.9.2 or newer). Live files are regular files; mise automatically saves their
+history locally, following [Dotfiles That Save Themselves](https://jdx.dev/posts/2026-09-07-dotfiles-that-save-themselves/).
 
 ## Layout
 
 ```txt
-stow/common/           Shared files linked into $HOME: .zshrc, .tmux.conf, .gitconfig
-stow/macos/            macOS-only home files, when needed
-stow/linux/            Linux-only home files, when needed
+stow/common/           Starter copies for shared live files (legacy directory name)
+stow/macos/            Optional macOS starter files
+stow/linux/            Optional Linux starter files
 topics/common/**/*.zsh Shared shell modules auto-loaded by .zshrc
 topics/macos/**/*.zsh  macOS shell modules auto-loaded on macOS
 topics/linux/**/*.zsh  Linux shell modules auto-loaded on Linux
 packages/macos/        Homebrew Brewfile for base tools/build prerequisites
 packages/linux/apt.txt Ubuntu/apt base tools/build prerequisites
-templates/mise/config.toml Global mise tool versions copied to ~/.config/mise/config.toml
+templates/mise/config.toml Initial global tool versions; existing config is preserved
 os/macos/              Optional macOS defaults scripts
 hosts/<hostname>/      Optional machine-specific shell snippets
 secrets/               Notes/templates only; do not commit real secrets
@@ -24,8 +26,16 @@ secrets/               Notes/templates only; do not commit real secrets
 ```sh
 git clone <your-repo-url> ~/dotfiles
 cd ~/dotfiles
-./install.sh           # installs base packages, links dotfiles, copies mise config, runs mise install
+./install.sh           # installs packages/mise, seeds files, enables history, installs tools
 ```
+
+The migration helper requires Python 3 (installed by the Linux package list;
+on macOS, use the Python 3 supplied by developer tools or install it first).
+Existing regular files and global mise tool settings are preserved. Old symlinks
+are copied into regular files, with standalone backups under
+`~/.local/state/dotfiles/backups/`. The legacy `stow/` source directory remains so
+old links on other machines still resolve until those machines migrate; GNU Stow
+is no longer used or installed.
 
 Force a profile:
 
@@ -39,7 +49,7 @@ Force a profile:
 Mise only:
 
 ```sh
-./script/mise                    # install mise, copy config, install devtools, run mise install
+./script/mise                    # install mise, seed absent config, install devtools, run mise install
 ./script/mise --no-tools
 ./script/mise --no-devtools       # skip devtools like hurl
 ./script/mise --with-k8s-tools    # optional: mise use -g ubi:txn2/kubefwd kubectl grpcurl
@@ -58,13 +68,38 @@ github.com-personal -> ~/.ssh/id_ed25519_personal
 github.com-hydra    -> ~/.ssh/id_ed25519_hydra
 ```
 
-Relink only:
+## Migrate this machine / manage dotfiles
 
 ```sh
-./script/link common
-./script/link common macos
-./script/link common linux
+./install.sh common --no-packages  # migrate without installing runtimes/base packages
+./script/link common             # compatibility name: seed/track, no symlinks
+./script/link zellij             # opt in to Zellij files too
+mise bootstrap --only dotfiles,services
+mise bootstrap dotfiles status
+mise bootstrap dotfiles history --path ~/.zshrc
+mise bootstrap dotfiles rollback ~/.zshrc --dry-run
 ```
+
+`script/link` creates global declarations in `~/.config/mise/conf.d/dotfiles-*.toml`,
+saves a baseline, and starts the `mise-history` user service through mise bootstrap.
+Edit `~/.zshrc`, `~/.tmux.conf`, and other live files normally. Re-running setup
+only seeds missing files; it does not overwrite live edits with starter copies.
+The starter copies in this checkout are not automatically updated by history.
+To change the defaults for future fresh installs, update the corresponding
+`stow/` starter explicitly as well.
+
+Shell modules still load from this checkout. `~/.config/dotfiles/root` records its
+location; rerun `script/link common` if you move the checkout. Topic files, host
+snippets, `~/.secrets`, `~/.localrc`, and `~/.gitconfig.local` are not enrolled in
+history. Keep the checkout for the topic modules and helper scripts.
+
+History is local by default. To share it, connect a **separate private history
+repository** with `mise bootstrap dotfiles origin set <private-git-url>`.
+The existing dotfiles source repository is not automatically used as a history
+origin. On another machine, clone this source checkout and install the base
+packages/mise first, then restore the history with
+`mise bootstrap --from-git <private-git-url>` and rerun `script/link common` to
+record that machine's checkout path. Ongoing synchronization needs Git credentials.
 
 ## Tool strategy
 
@@ -82,7 +117,7 @@ Relink only:
 - `bin/dot` refreshes the repo and re-runs setup.
 - Private config lives outside git in `~/.localrc` and `~/.gitconfig.local`.
 
-Symlinking is handled by GNU Stow so nested configs like `.config/nvim` are easy later.
+To enroll another existing configuration file, run `mise bootstrap dotfiles track <path>`.
 
 ## macOS lid-closed caffeinate
 
@@ -91,10 +126,10 @@ the Mac itself from sleeping while the display-awake hold is active, restores
 the former setting after the final concurrent holder exits, and reaps stale
 holders at the next prompt. Other `caffeinate` invocations are unchanged.
 
-It uses `sudo -n /usr/bin/pmset`, so add an appropriately scoped passwordless
-sudoers rule for `/usr/bin/pmset` before relying on lid-closed operation. If
-that rule is missing, it warns and runs standard `caffeinate` without changing
-the sleep setting. An optional app at
+The first `caffeinate -d` call prompts with `sudo -v`, then refreshes its sudo
+timestamp while the hold runs so it can restore the setting on exit. If the
+password is declined or authentication fails, it warns and runs standard
+`caffeinate` without changing the sleep setting. An optional app at
 `~/Library/Application Support/CaffeinateLid/CaffeinateLid.app` receives the
 holder-directory path to show a menu-bar indicator. Optional `hotspot` and
 `hotspot_leave` shell functions join a hotspot while a lid-safe hold is active

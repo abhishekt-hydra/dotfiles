@@ -17,5 +17,5 @@ elif command -v batcat >/dev/null 2>&1; then
   alias cat='batcat'
 fi
 
-# Local/user aliases live in a stowed ~/.aliases file. It may source ~/.secrets.
+# Local/user aliases live in the mise-tracked ~/.aliases file. It may source ~/.secrets.
 [[ -f "$HOME/.aliases" ]] && source "$HOME/.aliases"

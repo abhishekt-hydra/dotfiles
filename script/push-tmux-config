@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# Bootstrap a remote Ubuntu development host, then copy and activate only the
+# local tmux configuration. No shell, Git, or other dotfiles are copied.
+#
+# Usage:
+#   ./script/push-tmux-config
+#   ./script/push-tmux-config aws-xlarge
+#   TMUX_CONF_SOURCE=/path/to/.tmux.conf ./script/push-tmux-config aws-xlarge
+
+set -euo pipefail
+
+target="${1:-aws-xlarge}"
+source_file="${TMUX_CONF_SOURCE:-$HOME/.tmux.conf}"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+widget_dir="$script_dir/../stow/common/.tmux"
+
+if [[ ! -f "$source_file" ]]; then
+  echo "tmux config not found: $source_file" >&2
+  exit 1
+fi
+
+for widget in disk_space.sh network_speed.sh; do
+  if [[ ! -f "$widget_dir/$widget" ]]; then
+    echo "tmux widget not found: $widget_dir/$widget" >&2
+    exit 1
+  fi
+done
+
+echo "Installing Git, Docker, tmux, and build prerequisites on $target..."
+ssh "$target" 'bash -s' <<'REMOTE'
+set -e
+sudo apt-get update
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  ca-certificates curl git tmux zsh docker.io build-essential pkg-config
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"
+if ! command -v vector >/dev/null 2>&1; then
+  bash -c "$(curl -fsSL https://setup.vector.dev)"
+  sudo apt-get install -y vector
+fi
+# Vector is installed for development; do not start a pipeline without a config.
+sudo systemctl disable --now vector 2>/dev/null || true
+REMOTE
+
+echo "Copying $source_file to $target:~/.tmux.conf..."
+scp "$source_file" "$target:~/.tmux.conf"
+
+echo "Copying portable tmux status widgets to $target:~/.tmux/..."
+ssh "$target" 'mkdir -p "$HOME/.tmux"'
+scp "$widget_dir/disk_space.sh" "$widget_dir/network_speed.sh" "$target:~/.tmux/"
+ssh "$target" 'chmod 755 "$HOME/.tmux/disk_space.sh" "$HOME/.tmux/network_speed.sh"'
+
+echo "Installing mise, Rust 1.96, tmux plugins, and activating the configuration..."
+ssh "$target" 'bash -s' <<'REMOTE'
+set -e
+if [[ ! -x "$HOME/.local/bin/mise" ]]; then
+  curl https://mise.run | sh
+fi
+mise="$HOME/.local/bin/mise"
+activation='eval "$($HOME/.local/bin/mise activate bash)"'
+if ! grep -qxF "$activation" "$HOME/.bashrc"; then
+  printf '\n%s\n' "$activation" >>"$HOME/.bashrc"
+fi
+"$mise" use --global rust@1.96
+"$mise" use --global fzf@latest ripgrep@latest
+if [[ ! -f "$HOME/.zshrc" ]]; then
+  cat >"$HOME/.zshrc" <<'ZSH'
+# Basic development shell setup managed by dotfiles/script/push-tmux-config.
+eval "$(~/.local/bin/mise activate zsh)"
+eval "$(fzf --zsh)"
+ZSH
+fi
+powerlevel10k_dir="$HOME/.local/share/powerlevel10k"
+if [[ ! -d "$powerlevel10k_dir/.git" ]]; then
+  mkdir -p "$(dirname "$powerlevel10k_dir")"
+  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$powerlevel10k_dir"
+fi
+if ! grep -qxF '# Powerlevel10k theme.' "$HOME/.zshrc"; then
+  cat >>"$HOME/.zshrc" <<'ZSH'
+
+# Powerlevel10k theme.
+source "$HOME/.local/share/powerlevel10k/powerlevel10k.zsh-theme"
+[[ -r "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"
+ZSH
+fi
+sudo chsh -s "$(command -v zsh)" "$USER"
+docker pull clickhouse/clickhouse-server:latest
+mkdir -p "$HOME/.config/clickhouse"
+cat >"$HOME/.config/clickhouse/disable-system-logs.xml" <<'XML'
+<clickhouse>
+  <!-- Keep user tables but disable optional system log tables. -->
+  <logger>
+    <level>warning</level>
+  </logger>
+  <query_log remove="1"/>
+  <query_log>
+    <enable_user_query_log>false</enable_user_query_log>
+  </query_log>
+  <query_thread_log remove="1"/>
+  <query_views_log remove="1"/>
+  <query_metric_log remove="1"/>
+  <part_log remove="1"/>
+  <trace_log remove="1"/>
+  <text_log remove="1"/>
+  <metric_log remove="1"/>
+  <asynchronous_metric_log remove="1"/>
+  <processors_profile_log remove="1"/>
+  <opentelemetry_span_log remove="1"/>
+  <session_log remove="1"/>
+  <zookeeper_log remove="1"/>
+  <backup_log remove="1"/>
+  <background_schedule_pool_log>
+    <duration_threshold_milliseconds>600000</duration_threshold_milliseconds>
+  </background_schedule_pool_log>
+</clickhouse>
+XML
+if docker container inspect clickhouse >/dev/null 2>&1; then
+  clickhouse_state="$(docker inspect --format '{{.State.Status}}' clickhouse)"
+  if [[ "$clickhouse_state" != "running" ]]; then
+    # A stopped or restarting bootstrap container can safely be rebuilt; user
+    # data remains in the named clickhouse-data volume.
+    docker rm -f clickhouse >/dev/null
+  fi
+fi
+if ! docker container inspect clickhouse >/dev/null 2>&1; then
+  docker volume create clickhouse-data >/dev/null
+  docker run -d \
+    --name clickhouse \
+    --restart unless-stopped \
+    --ulimit nofile=262144:262144 \
+    --log-driver local \
+    --log-opt max-size=1g \
+    --log-opt max-file=1 \
+    --log-opt compress=false \
+    --publish 127.0.0.1:8123:8123 \
+    --publish 127.0.0.1:9000:9000 \
+    --volume clickhouse-data:/var/lib/clickhouse \
+    --volume "$HOME/.config/clickhouse/disable-system-logs.xml:/etc/clickhouse-server/config.d/disable-system-logs.xml:ro" \
+    --tmpfs /var/log/clickhouse-server:rw,nosuid,nodev,noexec,size=32m \
+    clickhouse/clickhouse-server:latest >/dev/null
+else
+  docker start clickhouse >/dev/null
+fi
+for table in query_log error_log background_schedule_pool_log; do
+  docker exec clickhouse clickhouse-client --query "TRUNCATE TABLE IF EXISTS system.$table" || true
+done
+mkdir -p "$HOME/.tmux/plugins"
+if [[ ! -d "$HOME/.tmux/plugins/tpm" ]]; then
+  git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
+fi
+"$HOME/.tmux/plugins/tpm/bin/install_plugins"
+tmux_session="dotfiles-bootstrap-$$"
+tmux new-session -d -s "$tmux_session"
+tmux kill-session -t "$tmux_session"
+printf '\n'
+git --version
+docker --version
+vector --version
+docker exec clickhouse clickhouse-client --query 'SELECT version()'
+"$mise" --version
+"$mise" exec rust@1.96 -- rustc --version
+"$mise" exec fzf@latest -- fzf --version
+"$mise" exec ripgrep@latest -- rg --version | head -1
+zsh --version
+tmux -V
+REMOTE
+
+echo "Bootstrap complete. Reconnect with: ssh $target"
+echo "Docker without sudo becomes available after that reconnect."

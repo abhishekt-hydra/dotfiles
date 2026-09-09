@@ -30,7 +30,7 @@ install_macos() {
 
 install_linux() {
   if ! command -v apt-get >/dev/null 2>&1; then
-    echo "Linux setup supports Ubuntu/apt only. Install stow manually, then run ./script/link common linux." >&2
+    echo "Linux setup supports Ubuntu/apt only. Install base dependencies manually, then run ./install.sh common --no-packages." >&2
     exit 1
   fi
 
@@ -43,12 +43,7 @@ install_linux() {
 }
 
 case "$profile" in
-  common)
-    if ! command -v stow >/dev/null 2>&1; then
-      echo "Profile 'common' does not install packages. Install GNU Stow first or run ./install.sh macos/linux." >&2
-      exit 1
-    fi
-    ;;
+  common) ;;
   macos) install_macos ;;
   linux) install_linux ;;
   *) echo "Unknown profile: $profile" >&2; exit 1 ;;

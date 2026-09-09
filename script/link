@@ -1,70 +1,14 @@
 #!/usr/bin/env bash
+# Compatibility entry point: migrate/seed live files and enable mise bootstrap history.
 set -euo pipefail
-
 cd "$(dirname "$0")/.."
-DOTFILES_ROOT="$(pwd -P)"
-BACKUP_TS="${DOTFILES_BACKUP_TS:-$(date +%Y%m%d%H%M%S)}"
-
-if ! command -v stow >/dev/null 2>&1; then
-  echo "GNU Stow is required. Run ./install.sh macos or ./install.sh linux first." >&2
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+command -v mise >/dev/null || { echo 'Install mise first: ./script/mise --no-tools' >&2; exit 1; }
+command -v python3 >/dev/null || { echo 'Python 3 is required for the one-time dotfiles migration.' >&2; exit 1; }
+if ! mise bootstrap dotfiles track --help >/dev/null 2>&1; then
+  echo 'mise 2026.9.2 or newer is required. Run: mise self-update --no-plugins' >&2
   exit 1
 fi
-
-if [[ $# -eq 0 ]]; then
-  set -- common
-fi
-
-same_target() {
-  local src="$1" dst="$2"
-
-  [[ -L "$dst" ]] || return 1
-
-  if command -v realpath >/dev/null 2>&1; then
-    [[ "$(realpath "$dst" 2>/dev/null || true)" == "$(realpath "$src" 2>/dev/null || true)" ]]
-  else
-    [[ "$(readlink "$dst" 2>/dev/null || true)" == "$src" ]]
-  fi
-}
-
-backup_existing() {
-  local target="$1"
-  local backup="${target}.backup.${BACKUP_TS}"
-  local i=1
-
-  while [[ -e "$backup" || -L "$backup" ]]; do
-    backup="${target}.backup.${BACKUP_TS}.${i}"
-    i=$((i + 1))
-  done
-
-  mv "$target" "$backup"
-  echo "Backed up $target -> $backup"
-}
-
-prepare_package() {
-  local package="$1"
-  local package_root="$DOTFILES_ROOT/stow/$package"
-  local src rel dst
-
-  while IFS= read -r -d '' src; do
-    rel="${src#$package_root/}"
-    dst="$HOME/$rel"
-
-    if [[ -e "$dst" || -L "$dst" ]]; then
-      if same_target "$src" "$dst"; then
-        continue
-      fi
-      backup_existing "$dst"
-    fi
-  done < <(find "$package_root" \( -type f -o -type l \) -print0)
-}
-
-for package in "$@"; do
-  if [[ -d "$DOTFILES_ROOT/stow/$package" ]]; then
-    echo "Preparing stow/$package -> $HOME"
-    prepare_package "$package"
-    echo "Linking stow/$package -> $HOME"
-    stow --dir "$DOTFILES_ROOT/stow" --target "$HOME" --verbose --restow "$package"
-  else
-    echo "Skipping missing stow package: $package"
-  fi
-done
+python3 ./script/seed-dotfiles.py "$@"
+mise bootstrap dotfiles save --description 'Migrate/seed dotfiles with mise bootstrap'
+mise bootstrap --only dotfiles,services --yes

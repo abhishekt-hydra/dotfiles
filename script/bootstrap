@@ -12,7 +12,7 @@ usage() {
   cat <<'EOF'
 Usage: ./install.sh [auto|common|macos|linux] [--no-packages] [--with-k8s-tools]
 
-Default: auto-detect OS, install packages, link dotfiles, copy mise config, run mise install.
+Default: auto-detect OS, install packages, migrate/seed regular dotfiles, enable mise history, install tools.
 
 Optional tool groups:
   --with-k8s-tools  Install kubefwd, kubectl, and grpcurl through mise (not Homebrew).
@@ -59,8 +59,7 @@ setup_gitconfig_local() {
         "$template" > "$target"
     echo "Created $target"
   else
-    cp "$template" "$target"
-    echo "Created $target from template; edit user.name/user.email"
+    echo "No ~/.gitconfig.local; keeping existing Git identity (copy templates/gitconfig.local to configure it)."
   fi
 }
 
@@ -80,17 +79,17 @@ if [[ "$install_packages" == "true" ]]; then
   ./script/install "$profile"
 fi
 
+# Install mise before configuring dotfiles. Existing global tool choices are preserved.
+./script/mise "$profile" --no-tools "${mise_extra_args[@]}"
+
 packages=(common)
 if [[ "$profile" != "common" ]]; then
   packages+=("$profile")
 fi
-
 ./script/link "${packages[@]}"
 
 if [[ "$install_packages" == "true" ]]; then
-  ./script/mise "$profile" "${mise_extra_args[@]}"
-else
-  ./script/mise "$profile" --no-install --no-tools "${mise_extra_args[@]}"
+  ./script/mise "$profile" --no-copy "${mise_extra_args[@]}"
 fi
 
 echo "Done. Restart your shell or run: exec zsh"
