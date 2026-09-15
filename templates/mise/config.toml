@@ -1,9 +1,57 @@
+[bootstrap.packages]
+# No duplication: portable CLIs use one unscoped brew: line (macOS + Linux).
+# System-integrated tools (git/zsh) stay native per-OS; -dev libs stay apt-only.
+"brew:autoconf" = "latest"
+"brew:automake" = "latest"
+"brew:bat" = "latest"
+"brew:bitwarden-cli" = "latest"
+"brew:curl" = "latest"
+"brew:direnv" = "latest"
+"brew:fd" = "latest"
+"brew:fzf" = "latest"
+"brew:jq" = "latest"
+"brew:pkgconf" = "latest"
+"brew:rsync" = "latest"
+"brew:unzip" = "latest"
+"brew:wget" = "latest"
+"brew:xz" = "latest"
+"brew:zoxide" = "latest"
+# System-integrated — native per OS
+"brew:git" = { os = "macos", version = "latest" }
+"brew:zsh" = { os = "macos", version = "latest" }
+# macOS-only shims (Linux has these natively / via apt -dev below)
+"brew:coreutils" = { os = "macos", version = "latest" }
+"brew:libyaml" = { os = "macos", version = "latest" }
+"brew:openssl@3" = { os = "macos", version = "latest" }
+"brew:readline" = { os = "macos", version = "latest" }
+"brew:zlib" = { os = "macos", version = "latest" }
+"brew-cask:1password" = { os = "macos" }
+"brew-cask:ghostty" = { os = "macos" }
+"brew-cask:raycast" = { os = "macos" }
+"brew-cask:visual-studio-code" = { os = "macos" }
+# Linux-only: system-integrated counterparts + build libs / system tools
+"apt:git" = { os = "linux", version = "latest" }
+"apt:zsh" = { os = "linux", version = "latest" }
+"apt:build-essential" = { os = "linux", version = "latest" }
+"apt:ca-certificates" = { os = "linux", version = "latest" }
+"apt:iproute2" = { os = "linux", version = "latest" }
+"apt:libffi-dev" = { os = "linux", version = "latest" }
+"apt:libncurses-dev" = { os = "linux", version = "latest" }
+"apt:libreadline-dev" = { os = "linux", version = "latest" }
+"apt:libssl-dev" = { os = "linux", version = "latest" }
+"apt:libyaml-dev" = { os = "linux", version = "latest" }
+"apt:openssh-client" = { os = "linux", version = "latest" }
+"apt:python3" = { os = "linux", version = "latest" }
+"apt:tar" = { os = "linux", version = "latest" }
+"apt:wl-clipboard" = { os = "linux", version = "latest" }
+"apt:xclip" = { os = "linux", version = "latest" }
+"apt:zlib1g-dev" = { os = "linux", version = "latest" }
+
 [tools]
 # Devtools
 hurl = "8.0.1"
 
 # Runtimes and CLIs
-detox = "latest"
 eza = "latest"
 elixir = "1.19.5"
 erlang = "28.5"
@@ -20,7 +68,8 @@ python = "3.13.13"
 rclone = "latest"
 ripgrep = "latest"
 ruby = "3.4.5"
-rust = "latest"
+mr-boxington = { version = "latest", postinstall = "mbx setup --yes" }
+rust = { version = "latest", mr_boxington = true }
 btop = "1.2.13"
 
 [settings]
