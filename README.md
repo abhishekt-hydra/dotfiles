@@ -121,7 +121,7 @@ To enroll another existing configuration file, run `mise bootstrap dotfiles trac
 
 ## macOS lid-closed caffeinate
 
-`topics/macos/system/caffeinate-lid.zsh` extends `caffeinate -d`: it prevents
+`topics/macos/system/caffeinate-lid.zsh`, loaded by `.zshrc`, extends `caffeinate -d`: it prevents
 the Mac itself from sleeping while the display-awake hold is active, restores
 the former setting after the final concurrent holder exits, and reaps stale
 holders at the next prompt. Other `caffeinate` invocations are unchanged.
@@ -134,3 +134,10 @@ password is declined or authentication fails, it warns and runs standard
 holder-directory path to show a menu-bar indicator. Optional `hotspot` and
 `hotspot_leave` shell functions join a hotspot while a lid-safe hold is active
 and restore the prior network once the last holder exits.
+
+## Linux caffeinate
+
+The Linux profile seeds `~/.local/bin/caffeinate` and enrolls it in mise
+bootstrap tracking. The Bash shim maps the macOS-compatible flags to
+`systemd-inhibit`; it uses a direct blocker where permitted and otherwise
+prompts for sudo only when lid or sleep inhibition requires it.
