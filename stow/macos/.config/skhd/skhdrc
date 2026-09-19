@@ -1,0 +1,42 @@
+# Minimal i3-like bindings for yabai.
+
+# launch terminal
+alt - return : open -na /Applications/Alacritty.app
+
+# focus windows
+alt - h : yabai -m window --focus west
+alt - j : yabai -m window --focus south
+alt - k : yabai -m window --focus north
+alt - l : yabai -m window --focus east
+
+# swap windows
+shift + alt - h : yabai -m window --swap west
+shift + alt - j : yabai -m window --swap south
+shift + alt - k : yabai -m window --swap north
+shift + alt - l : yabai -m window --swap east
+
+# basic window controls
+alt - f : yabai -m window --toggle zoom-fullscreen
+alt - space : yabai -m window --toggle float
+
+# focus spaces
+alt - 1 : $HOME/.config/yabai/focus-space 1
+alt - 2 : $HOME/.config/yabai/focus-space 2
+alt - 3 : $HOME/.config/yabai/focus-space 3
+alt - 4 : $HOME/.config/yabai/focus-space 4
+alt - 5 : $HOME/.config/yabai/focus-space 5
+alt - 6 : $HOME/.config/yabai/focus-space 6
+alt - 7 : $HOME/.config/yabai/focus-space 7
+alt - 8 : $HOME/.config/yabai/focus-space 8
+alt - 9 : $HOME/.config/yabai/focus-space 9
+
+# move window to spaces
+shift + alt - 1 : yabai -m window --space 1
+shift + alt - 2 : yabai -m window --space 2
+shift + alt - 3 : yabai -m window --space 3
+shift + alt - 4 : yabai -m window --space 4
+shift + alt - 5 : yabai -m window --space 5
+shift + alt - 6 : yabai -m window --space 6
+shift + alt - 7 : yabai -m window --space 7
+shift + alt - 8 : yabai -m window --space 8
+shift + alt - 9 : yabai -m window --space 9

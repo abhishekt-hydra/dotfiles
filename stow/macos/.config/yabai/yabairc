@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+
+# Minimal SIP-friendly yabai config.
+yabai -m config layout bsp
+yabai -m config window_gap 0
+yabai -m config top_padding 0
+yabai -m config bottom_padding 0
+yabai -m config left_padding 0
+yabai -m config right_padding 0

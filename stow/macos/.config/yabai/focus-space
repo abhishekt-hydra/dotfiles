@@ -1,0 +1,58 @@
+#!/bin/sh
+# Switch Spaces through Mission Control. This is a compatibility path for
+# macOS versions where yabai can query Spaces but `space --focus` is broken.
+set -eu
+
+target=${1:-}
+case "$target" in
+    ''|*[!0-9]*)
+        echo "usage: focus-space <mission-control-index>" >&2
+        exit 2
+        ;;
+esac
+
+space_field() {
+    yabai -m query --spaces | /usr/bin/python3 -c '
+import json, sys
+spaces = json.load(sys.stdin)
+target = int(sys.argv[1])
+field = sys.argv[2]
+
+target_space = next((space for space in spaces if space["index"] == target), None)
+if target_space is None:
+    raise SystemExit("unknown Space index: {}".format(target))
+
+if field == "display":
+    print(target_space["display"])
+elif field == "visible":
+    visible = next(space for space in spaces
+                   if space["display"] == target_space["display"] and space["is-visible"])
+    print(visible["index"])
+' "$target" "$1"
+}
+
+target_display=$(space_field display)
+yabai -m display --focus "$target_display" 2>/dev/null || true
+sleep 0.15
+
+# One native switch at a time lets Mission Control finish each transition.
+# The limit protects against a stuck or reordered Space list.
+steps=0
+while [ "$steps" -lt 16 ]; do
+    current=$(space_field visible)
+    [ "$current" -eq "$target" ] && exit 0
+
+    if [ "$current" -lt "$target" ]; then
+        key_code=124 # right arrow
+    else
+        key_code=123 # left arrow
+    fi
+
+    /usr/bin/osascript -e "tell application \"System Events\" to key code $key_code using control down" >/dev/null
+    # macOS ignores or queues input received during the Space animation.
+    sleep 0.9
+    steps=$((steps + 1))
+done
+
+echo "failed to focus Space $target" >&2
+exit 1
