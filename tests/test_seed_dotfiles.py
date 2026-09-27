@@ -16,7 +16,7 @@ class MigrationTest(unittest.TestCase):
             (repo / 'script').mkdir(parents=True)
             home.mkdir()
             shutil.copy2(SCRIPT, repo / 'script/seed-dotfiles.py')
-            source = repo / 'stow/common'
+            source = repo / 'dotfiles/common'
             (source / '.config/app').mkdir(parents=True)
             (source / '.zshrc').write_text('source rc')
             (source / '.aliases').write_text('source aliases')

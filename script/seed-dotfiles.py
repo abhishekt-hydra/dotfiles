@@ -70,8 +70,6 @@ def main():
     sources = []
     for package in packages:
         base = ROOT / "dotfiles" / package
-        if not base.exists():  # legacy layout, supported during migration
-            base = ROOT / "stow" / package
         if not base.exists():
             continue
         files = sorted(p for p in base.rglob("*") if p.is_file())

@@ -1,4 +1,4 @@
-# Loaded after compinit by stow/common/.zshrc.
+# Loaded after compinit by dotfiles/common/.zshrc.
 
 if typeset -f zinit >/dev/null 2>&1; then
   zinit light Aloxaf/fzf-tab

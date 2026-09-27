@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# Ubuntu/Linux caffeinate shim using systemd-inhibit.
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: caffeinate [options] [--] [command ...]
+
+Options:
+  -d        inhibit lid-switch handling too (and sleep)
+  -i        inhibit idle handling
+  -s        inhibit system sleep/suspend
+  -m, -u    accepted for macOS compatibility (no-op on Linux)
+  -t SECS   stop inhibiting after SECS seconds
+  -w PID    inhibit while PID is alive
+  -h        show help
+
+Examples:
+  caffeinate -d
+  caffeinate -d make test
+  caffeinate -t 3600
+  caffeinate -w 12345
+USAGE
+}
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+add_unique() {
+  local item="$1" existing
+  for existing in "${what_items[@]}"; do
+    [[ "$existing" == "$item" ]] && return 0
+  done
+  what_items+=("$item")
+}
+
+what_items=(idle)
+needs_privileged=0
+timeout_seconds=""
+wait_pid=""
+declare -a cmd=()
+
+while (($#)); do
+  case "$1" in
+    --) shift; cmd=("$@"); break ;;
+    -h|--help) usage; exit 0 ;;
+    -t) [[ $# -ge 2 ]] || { echo "caffeinate: -t requires seconds" >&2; exit 2; }; timeout_seconds="$2"; shift 2 ;;
+    -t*) timeout_seconds="${1#-t}"; shift ;;
+    -w) [[ $# -ge 2 ]] || { echo "caffeinate: -w requires pid" >&2; exit 2; }; wait_pid="$2"; shift 2 ;;
+    -w*) wait_pid="${1#-w}"; shift ;;
+    --*) echo "caffeinate: unsupported option: $1" >&2; exit 2 ;;
+    -*)
+      flags="${1#-}"
+      [[ "$flags" == *i* ]] && add_unique idle
+      if [[ "$flags" == *s* ]]; then add_unique sleep; needs_privileged=1; fi
+      if [[ "$flags" == *d* ]]; then add_unique sleep; add_unique handle-lid-switch; needs_privileged=1; fi
+      shift
+      ;;
+    *) cmd=("$@"); break ;;
+  esac
+done
+
+have systemd-inhibit || { echo "caffeinate: systemd-inhibit not found" >&2; exit 127; }
+
+IFS=:
+what="${what_items[*]}"
+unset IFS
+
+if [[ -n "$wait_pid" ]]; then
+  target=(bash -c 'while kill -0 "$1" 2>/dev/null; do sleep 5; done' _ "$wait_pid")
+elif ((${#cmd[@]})); then
+  target=("${cmd[@]}")
+else
+  echo "caffeinate: inhibiting $what; press Ctrl-C to stop" >&2
+  target=(sleep infinity)
+fi
+
+if [[ -n "$timeout_seconds" ]]; then
+  target=(timeout "$timeout_seconds" "${target[@]}")
+fi
+
+run_direct() {
+  systemd-inhibit \
+    --what="$what" \
+    --who="${USER:-$(id -un)}" \
+    --why="caffeinate shim" \
+    --mode=block \
+    "${target[@]}"
+}
+
+# On a local desktop/Herdr pane, logind may allow lid/sleep inhibition directly.
+# Over plain SSH it often denies it, so fall back to a sudo-owned blocker.
+if systemd-inhibit --what="$what" --who="${USER:-$(id -un)}" --why="caffeinate preflight" --mode=block true 2>/dev/null; then
+  run_direct
+  exit $?
+fi
+
+if (( needs_privileged )); then
+  echo "caffeinate: direct inhibition denied for $what; trying sudo fallback" >&2
+  if sudo -v; then
+    sudo systemd-inhibit \
+      --what="$what" \
+      --who="${USER:-$(id -un)}" \
+      --why="caffeinate shim sudo fallback" \
+      --mode=block \
+      "${target[@]}"
+    exit $?
+  else
+    echo "caffeinate: sudo authentication failed; falling back to idle-only inhibition" >&2
+    what="idle"
+    run_direct
+    exit $?
+  fi
+fi
+
+run_direct

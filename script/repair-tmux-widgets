@@ -7,8 +7,8 @@ set -euo pipefail
 target="${1:-aws-xlarge}"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 dotfiles_root="$(cd -- "$script_dir/.." && pwd)"
-config="$dotfiles_root/stow/common/.tmux.conf"
-widget_dir="$dotfiles_root/stow/common/.tmux"
+config="$dotfiles_root/dotfiles/common/.tmux.conf"
+widget_dir="$dotfiles_root/dotfiles/common/.tmux"
 
 for file in "$config" "$widget_dir/disk_space.sh" "$widget_dir/network_speed.sh"; do
   [[ -f "$file" ]] || { echo "required file is missing: $file" >&2; exit 1; }

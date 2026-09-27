@@ -12,7 +12,7 @@ set -euo pipefail
 target="${1:-aws-xlarge}"
 source_file="${TMUX_CONF_SOURCE:-$HOME/.tmux.conf}"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-widget_dir="$script_dir/../stow/common/.tmux"
+widget_dir="$script_dir/../dotfiles/common/.tmux"
 
 if [[ ! -f "$source_file" ]]; then
   echo "tmux config not found: $source_file" >&2

@@ -7,9 +7,10 @@ history locally, following [Dotfiles That Save Themselves](https://jdx.dev/posts
 ## Layout
 
 ```txt
-stow/common/           Starter copies for shared live files (legacy directory name)
-stow/macos/            Optional macOS starter files
-stow/linux/            Optional Linux starter files
+dotfiles/common/       Starter copies for shared live files
+dotfiles/macos/        Optional macOS starter files
+dotfiles/linux/        Optional Linux starter files
+dotfiles/zellij/       Optional Zellij starter files
 topics/common/**/*.zsh Shared shell modules auto-loaded by .zshrc
 topics/macos/**/*.zsh  macOS shell modules auto-loaded on macOS
 topics/linux/**/*.zsh  Linux shell modules auto-loaded on Linux
@@ -33,9 +34,10 @@ The migration helper requires Python 3 (installed by the Linux package list;
 on macOS, use the Python 3 supplied by developer tools or install it first).
 Existing regular files and global mise tool settings are preserved. Old symlinks
 are copied into regular files, with standalone backups under
-`~/.local/state/dotfiles/backups/`. The legacy `stow/` source directory remains so
-old links on other machines still resolve until those machines migrate; GNU Stow
-is no longer used or installed.
+`~/.local/state/dotfiles/backups/`. GNU Stow is not used: the starter copies live
+in `dotfiles/`, nothing is symlinked out of the checkout, and the package is not
+installed. A machine still holding links into the old `stow/` directory must run
+setup from a checkout at commit `bbb97ca` or earlier before pulling this change.
 
 Force a profile:
 
@@ -86,7 +88,7 @@ Edit `~/.zshrc`, `~/.tmux.conf`, and other live files normally. Re-running setup
 only seeds missing files; it does not overwrite live edits with starter copies.
 The starter copies in this checkout are not automatically updated by history.
 To change the defaults for future fresh installs, update the corresponding
-`stow/` starter explicitly as well.
+`dotfiles/` starter explicitly as well.
 
 Shell modules still load from this checkout. `~/.config/dotfiles/root` records its
 location; rerun `script/link common` if you move the checkout. Topic files, host
