@@ -39,6 +39,7 @@ _caffeinate_lid_reap() {
 # holder has gone away, then return Wi-Fi from the hotspot if that helper is
 # installed.
 _caffeinate_lid_restore_if_idle() {
+  local interactive="${1:-0}"
   _caffeinate_lid_reap
   local -a holders=("$CAFFEINATE_LID_DIR"/holder.*(N))
   (( ${#holders} )) && return 0
@@ -47,9 +48,15 @@ _caffeinate_lid_restore_if_idle() {
   if [[ -r "$CAFFEINATE_LID_DIR/prior" ]]; then
     prior="$(<"$CAFFEINATE_LID_DIR/prior")"
     if [[ "$prior" == <-> && "$prior" -le 1 ]]; then
-      sudo -n /usr/bin/pmset -a disablesleep "$prior"
+      if ! sudo -n /usr/bin/pmset -a disablesleep "$prior"; then
+        if (( ! interactive )) || ! sudo /usr/bin/pmset -a disablesleep "$prior"; then
+          print -u2 'caffeinate: could not restore lid sleep; saved setting retained for retry'
+          return 1
+        fi
+      fi
     else
       print -u2 'caffeinate: saved lid-sleep state is invalid; not changing it'
+      return 1
     fi
   fi
 
@@ -67,6 +74,11 @@ _caffeinate_lid_acquire() {
 
   local -a holders=("$CAFFEINATE_LID_DIR"/holder.*(N))
   if (( ${#holders} == 0 )); then
+    # A previous cleanup may have lacked sudo credentials. Retry before
+    # capturing a new baseline, or a stale SleepDisabled=1 becomes permanent.
+    if [[ -e "$CAFFEINATE_LID_DIR/prior" ]]; then
+      _caffeinate_lid_restore_if_idle || { _caffeinate_lid_unlock; return 1 }
+    fi
     if ! pmset_state="$(/usr/bin/pmset -g)"; then
       print -u2 'caffeinate: could not read the current lid-sleep setting'
       _caffeinate_lid_unlock
@@ -95,13 +107,15 @@ _caffeinate_lid_acquire() {
 }
 
 _caffeinate_lid_release() {
-  local token="$1"
+  local token="$1" interactive="${2:-0}"
   [[ -e "$CAFFEINATE_LID_DIR/holder.$token" ]] || return 0
   _caffeinate_lid_lock || return 1
   rm -f "$CAFFEINATE_LID_DIR/holder.$token"
-  _caffeinate_lid_restore_if_idle
+  local restored=0
+  _caffeinate_lid_restore_if_idle "$interactive" || restored=1
   _caffeinate_lid_unlock
-  rmdir "$CAFFEINATE_LID_DIR" 2>/dev/null
+  (( restored )) || rmdir "$CAFFEINATE_LID_DIR" 2>/dev/null
+  return "$restored"
 }
 
 # Shell exit, Ctrl-C, SIGHUP, and SIGTERM all run the zshexit hooks. Release
@@ -119,7 +133,7 @@ _caffeinate_lid_atexit() {
 _caffeinate_lid_sweep() {
   [[ -d "$CAFFEINATE_LID_DIR" ]] || return 0
   local -a holders=("$CAFFEINATE_LID_DIR"/holder.*(N))
-  (( ${#holders} )) || return 0
+  (( ${#holders} )) || [[ -e "$CAFFEINATE_LID_DIR/prior" ]] || return 0
 
   local f
   for f in $holders; do
@@ -127,9 +141,10 @@ _caffeinate_lid_sweep() {
   done
 
   _caffeinate_lid_lock || return 0
-  _caffeinate_lid_restore_if_idle
+  local restored=0
+  _caffeinate_lid_restore_if_idle || restored=1
   _caffeinate_lid_unlock
-  rmdir "$CAFFEINATE_LID_DIR" 2>/dev/null
+  (( restored )) || rmdir "$CAFFEINATE_LID_DIR" 2>/dev/null
 }
 
 _caffeinate_lid_join_hotspot() {
@@ -208,7 +223,7 @@ caffeinate() {
     wait "$display_watcher_pid" 2>/dev/null || true
     kill "$sudo_keepalive_pid" 2>/dev/null || true
     wait "$sudo_keepalive_pid" 2>/dev/null || true
-    _caffeinate_lid_release "$token"
+    _caffeinate_lid_release "$token" 1
   }
 }
 
