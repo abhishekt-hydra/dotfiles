@@ -1,11 +1,16 @@
 #!/bin/sh
-# Jump straight to a Space.
+# Jump straight to a Space, and take the keyboard with you.
 #
-# yabai's own `space --focus` is a silent no-op while SIP is enabled (it needs
-# the scripting addition), so we drive macOS's native "Switch to Desktop N"
-# shortcut instead. Those are bound to hyper + <number> by the dotfiles repo's
-# script/macos-space-hotkeys; one keystroke jumps straight to the target, with
-# no stepping through the Spaces in between.
+# yabai cannot reveal a hidden Space while SIP is enabled: `space --focus` lives
+# in the scripting addition, so it exits 0 and does nothing. We press macOS's
+# native "Switch to Desktop N" shortcut instead -- the dotfiles repo's
+# script/macos-space-hotkeys binds those to hyper + <number>. Desktop N is
+# yabai's Space index N, across all displays, and one keystroke jumps straight
+# there with no stepping through the Spaces in between.
+#
+# On a multi-display setup macOS reveals the Space but leaves the keyboard on
+# whichever display already had it, so we follow with `display --focus`. That
+# one does work without the scripting addition.
 set -eu
 
 target=${1:-}
@@ -22,4 +27,14 @@ set -- 18 19 20 21 23 22 26 28 25
 shift "$((target - 1))"
 key_code=$1
 
-exec /usr/bin/osascript -e "tell application \"System Events\" to key code $key_code using {command down, control down, option down, shift down}"
+display=$(yabai -m query --spaces | /usr/bin/python3 -c '
+import json, sys
+target = int(sys.argv[1])
+space = next((s for s in json.load(sys.stdin) if s["index"] == target), None)
+print(space["display"] if space else "")
+' "$target")
+
+/usr/bin/osascript -e "tell application \"System Events\" to key code $key_code using {command down, control down, option down, shift down}"
+
+# Already-focused display is an error, not a problem.
+[ -n "$display" ] && yabai -m display --focus "$display" 2>/dev/null || true
