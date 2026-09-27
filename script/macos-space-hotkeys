@@ -1,0 +1,43 @@
+#!/bin/sh
+# Bind macOS "Switch to Desktop N" to hyper + <number>, for N in 1..9.
+#
+# yabai cannot focus a Space while SIP is enabled -- `yabai -m space --focus`
+# exits 0 and does nothing, because that call lives in the scripting addition.
+# The supported fallback is Mission Control's own shortcut, but the
+# "Switch to Desktop N" entries ship unbound, which is why the old focus-space
+# had to walk ctrl-left/ctrl-right one Space at a time.
+#
+# Binding them makes every jump a single keystroke and a single transition,
+# no matter how far apart the Spaces are. ~/.config/yabai/focus-space presses
+# these; skhd never sees them.
+#
+# hyper = control + option + shift + command, chosen because no app claims it.
+set -eu
+
+MODS=1966080 # 262144 ctrl + 524288 opt + 131072 shift + 1048576 cmd
+
+# Key codes for the number row, 1 through 9.
+KEY_CODES="18 19 20 21 23 22 26 28 25"
+
+n=0
+for key_code in $KEY_CODES; do
+    n=$((n + 1))
+    # "Switch to Desktop 1" is symbolic hotkey 118; the rest follow in order.
+    defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add "$((117 + n))" "
+<dict>
+  <key>enabled</key><true/>
+  <key>value</key><dict>
+    <key>type</key><string>standard</string>
+    <key>parameters</key><array>
+      <integer>$((48 + n))</integer>
+      <integer>$key_code</integer>
+      <integer>$MODS</integer>
+    </array>
+  </dict>
+</dict>"
+done
+
+# Without this the shortcut daemon keeps serving the old table until logout.
+/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
+
+echo "bound hyper+1..9 to Desktop 1..9"
