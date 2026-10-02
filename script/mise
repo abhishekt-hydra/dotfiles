@@ -131,7 +131,8 @@ install_optional_k8s_tools() {
   fi
 
   echo "Installing optional k8s/gRPC tools through mise..."
-  mise use -g --yes ubi:txn2/kubefwd kubectl grpcurl
+  # github: backend, not the deprecated ubi: backend (removed in mise 2027.1.0).
+  mise use -g --yes github:txn2/kubefwd kubectl grpcurl
 }
 
 install_mise_tools() {

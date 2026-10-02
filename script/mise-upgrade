@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# Upgrade the floating mise fleet in one line, then reclaim the disk it left.
+#
+#   ./script/mise-upgrade             upgrade every tool tracked as "latest", then prune
+#   ./script/mise-upgrade --dry-run   show what would change, touch nothing
+#   ./script/mise-upgrade --no-prune  upgrade only, keep the old versions
+#   ./script/mise-upgrade --strict    exit non-zero if any tool failed
+#   ./script/mise-upgrade kubectl go  upgrade just these, whatever their pin says
+#
+# The fleet is derived from `mise outdated --json`, filtering to tools the global
+# config requests as "latest". That filter is what makes this safe to run without
+# thinking:
+#
+#   * Pinned tools are skipped, so an exact pin (hurl@8.0.1) only moves when you
+#     edit it. This is also why btop never enters the run - upstream dropped
+#     macOS builds after 1.2.13, so it stays pinned instead of failing every time.
+#   * Tools already current never enter the run.
+#   * Tools held back by minimum_release_age never enter the run; they surface on
+#     a later day once they age past the gate.
+#
+# Each tool is upgraded in its own process. One failure - a missing release, an
+# unsupported platform, a network blip - is recorded and the run continues, so a
+# single bad tool can never block the rest. That isolation is the whole point:
+# `mise upgrade a b c` aborts the batch on the first error.
+
+set -euo pipefail
+
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+dry_run=false
+do_prune=true
+strict=false
+targets=()
+
+# Print the header comment block (everything between the shebang and the code).
+usage() {
+  awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$0"
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run|-n) dry_run=true ;;
+    --no-prune) do_prune=false ;;
+    --strict) strict=true ;;
+    -h|--help) usage; exit 0 ;;
+    -*) echo "Unknown argument: $1" >&2; usage >&2; exit 1 ;;
+    *) targets+=("$1") ;;
+  esac
+  shift
+done
+
+for dep in mise jq; do
+  command -v "$dep" >/dev/null 2>&1 || { echo "$dep is required (run ./script/install)" >&2; exit 1; }
+done
+
+outdated_json=$(mise outdated --json 2>/dev/null || echo '{}')
+
+# Fleet = outdated tools still requested as "latest", or the explicit target list.
+fleet() {
+  if [[ ${#targets[@]} -gt 0 ]]; then
+    printf '%s\n' "${targets[@]}"
+    return
+  fi
+  printf '%s' "$outdated_json" \
+    | jq -r 'to_entries[] | select(.value.requested == "latest") | .key'
+}
+
+# A single-tool `mise ls --json` returns a bare array, unlike the whole-config
+# query which returns an object keyed by tool name.
+current_version() {
+  local out=""
+  # Empty input makes jq emit nothing at all, so `// "-"` alone is not enough.
+  out=$(mise ls --current "$1" --json 2>/dev/null | jq -r '.[0].version // "-"' 2>/dev/null) || out=""
+  printf '%s' "${out:--}"
+}
+
+if $dry_run; then
+  echo "mise-upgrade (dry run - nothing will be modified)"
+  echo
+  fleet=($(fleet))
+  if [[ ${#fleet[@]} -eq 0 ]]; then
+    echo "  nothing to upgrade: every floating tool is already current"
+  else
+    printf '%s\n' "${fleet[@]}" | while read -r tool; do
+      printf '  %-46s %s -> %s\n' \
+        "$tool" \
+        "$(printf '%s' "$outdated_json" | jq -r --arg t "$tool" '.[$t].current // "?"')" \
+        "$(printf '%s' "$outdated_json" | jq -r --arg t "$tool" '.[$t].latest // "?"')"
+    done
+  fi
+  if $do_prune; then
+    echo
+    echo "  prune would remove:"
+    # mise writes the entire prune report to stderr, so it must be folded in here.
+    # "no tracked config" means no config declares the tool, so it survives only
+    # by being installed - flag those rather than dropping them silently.
+    mise prune --dry-run 2>&1 >/dev/null \
+      | grep 'is prunable' \
+      | while read -r line; do
+          name=${line#mise }
+          name=${name%% is prunable*}
+          if [[ "$line" == *"no tracked config"* ]]; then
+            printf '    %-40s <- untracked, will be removed\n' "$name"
+          else
+            printf '    %s\n' "$name"
+          fi
+        done || true
+  fi
+  exit 0
+fi
+
+upgraded=()
+unchanged=()
+failed=()
+
+fleet=($(fleet))
+echo "mise-upgrade: ${#fleet[@]} floating tool(s) to check"
+echo
+
+for tool in "${fleet[@]}"; do
+  before=$(current_version "$tool")
+  log=$(mktemp)
+  if mise upgrade "$tool" >"$log" 2>&1; then
+    after=$(current_version "$tool")
+    if [[ "$before" != "$after" && "$after" != "-" ]]; then
+      printf '  upgraded  %-42s %s -> %s\n' "$tool" "$before" "$after"
+      upgraded+=("$tool")
+    else
+      printf '  current   %-42s %s\n' "$tool" "$before"
+      unchanged+=("$tool")
+    fi
+  else
+    reason=$(grep -oE 'unsupported env.*|No versions found.*|failed: .*' "$log" | head -1)
+    printf '  FAILED    %-42s %s\n' "$tool" "${reason:-see output below}"
+    sed 's/^/            /' "$log" | tail -3
+    failed+=("$tool")
+  fi
+  rm -f "$log"
+done
+
+if $do_prune; then
+  echo
+  untracked=$(mise prune --dry-run 2>&1 >/dev/null | grep -c 'is prunable: no tracked config' || true)
+  reclaimed=$(du -sh "${MISE_DATA_DIR:-$HOME/.local/share/mise}/installs" 2>/dev/null | cut -f1 || echo "?")
+  echo "pruning superseded versions (installs dir is currently ${reclaimed})"
+  [[ "$untracked" -gt 0 ]] && \
+    echo "  note: $untracked untracked tool(s) will be removed too; rerun with --no-prune to keep them"
+  mise prune --yes >/dev/null 2>&1 || echo "  prune did not complete cleanly (not fatal)"
+fi
+
+echo
+echo "mise-upgrade: ${#upgraded[@]} upgraded, ${#unchanged[@]} already current, ${#failed[@]} failed"
+
+if [[ ${#failed[@]} -gt 0 ]]; then
+  echo "failed: ${failed[*]}"
+  # Non-zero only under --strict: a broken tool is expected, not exceptional.
+  $strict && exit 1
+fi
+exit 0

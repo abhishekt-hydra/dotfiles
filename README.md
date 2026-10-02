@@ -54,8 +54,24 @@ Mise only:
 ./script/mise                    # install mise, seed absent config, install devtools, run mise install
 ./script/mise --no-tools
 ./script/mise --no-devtools       # skip devtools like hurl
-./script/mise --with-k8s-tools    # optional: mise use -g ubi:txn2/kubefwd kubectl grpcurl
+./script/mise --with-k8s-tools    # optional: mise use -g github:txn2/kubefwd kubectl grpcurl
 ```
+
+Upgrading what mise already installed:
+
+```sh
+./script/mise-upgrade             # upgrade every tool tracked as "latest", then prune old versions
+./script/mise-upgrade --dry-run   # show what would change, touch nothing
+./script/mise-upgrade --no-prune  # upgrade only, keep superseded versions
+./script/mise-upgrade helm go     # upgrade just these, whatever their pin says
+```
+
+`script/mise-upgrade` derives its work list from `mise outdated --json`, keeping
+only tools the global config requests as `latest`. Exact pins are therefore left
+alone (`hurl@8.0.1`, and `btop`, which is pinned because upstream dropped macOS
+builds after 1.2.13). Each tool is upgraded in its own process so one failure
+cannot abort the batch — the opposite of `mise upgrade a b c`, which stops at the
+first error. It exits non-zero only with `--strict`.
 
 SSH/GitHub account setup:
 
@@ -108,7 +124,8 @@ record that machine's checkout path. Ongoing synchronization needs Git credentia
 - Package manager installs only base system tools and build prerequisites.
 - Mise installs runtimes/dev CLIs from `templates/mise/config.toml`: node, python, ruby, go, rust, java, erlang/elixir, neovim, helm, eza, gh, ripgrep, lazygit, rclone, tuicr, etc.
 - Devtools are installed through mise in a separate script section: `mise use -g hurl@8.0.1`.
-- Optional k8s/gRPC CLIs are installed through mise, not Homebrew: `./script/mise --with-k8s-tools` runs `mise use -g ubi:txn2/kubefwd kubectl grpcurl`.
+- Optional k8s/gRPC CLIs are installed through mise, not Homebrew: `./script/mise --with-k8s-tools` runs `mise use -g github:txn2/kubefwd kubectl grpcurl`.
+- Keeping mise current after the initial install is `./script/mise-upgrade`; it upgrades floating tools and prunes the versions they replace.
 - Shell startup activates mise through `topics/common/system/mise.zsh`.
 
 ## Ideas borrowed from holman/dotfiles
