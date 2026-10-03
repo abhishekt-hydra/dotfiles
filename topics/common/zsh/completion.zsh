@@ -1,16 +1,5 @@
 # Loaded after compinit by dotfiles/common/.zshrc.
-
-if typeset -f zinit >/dev/null 2>&1; then
-  # Turbo mode, in this order: fzf-tab before the plugins that wrap widgets,
-  # syntax highlighting last. zicdreplay replays the compdef calls zinit
-  # captured from the turbo-loaded snippets.
-  zinit wait lucid for \
-    Aloxaf/fzf-tab \
-    atload"_zsh_autosuggest_start" \
-      zsh-users/zsh-autosuggestions \
-    atinit"zicdreplay -q" \
-      zdharma-continuum/fast-syntax-highlighting
-fi
+# fzf-tab, autosuggestions and syntax highlighting load from plugins.txt.
 
 # fzf keybindings: Ctrl-R history, Ctrl-T files, Alt-C dirs.
 _fzf_keybindings_candidates=(

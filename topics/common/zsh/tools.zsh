@@ -15,8 +15,7 @@ if command -v zoxide >/dev/null 2>&1; then
   # prints "zoxide: no match found" and leaves $PWD alone.
   eval "$(zoxide init zsh --cmd cd)"
 
-  # --cmd renames both commands, so restore the z spellings by hand. The `zi`
-  # name is free because plugins.zsh sets ZINIT[NO_ALIASES].
+  # --cmd renames both commands, so restore the z spellings by hand.
   alias z='cd'
   alias zi='cdi'
 fi

@@ -1,0 +1,17 @@
+# Shell plugins, bundled by antidote into one static file (see plugins.zsh).
+# kind:defer loads a plugin through romkatv/zsh-defer, after the first prompt.
+# Order matters: fzf-tab before the widget wrappers, syntax highlighting last.
+
+romkatv/zsh-defer
+
+# Oh My Zsh libs and plugins we use, without loading all of OMZ.
+ohmyzsh/ohmyzsh path:lib/git.zsh kind:defer
+ohmyzsh/ohmyzsh path:lib/directories.zsh kind:defer
+ohmyzsh/ohmyzsh path:lib/theme-and-appearance.zsh kind:defer
+ohmyzsh/ohmyzsh path:plugins/git kind:defer
+ohmyzsh/ohmyzsh path:plugins/brew kind:defer conditional:_plugins_has_brew
+ohmyzsh/ohmyzsh path:plugins/eza kind:defer conditional:_plugins_has_eza
+
+Aloxaf/fzf-tab kind:defer
+zsh-users/zsh-autosuggestions kind:defer
+zdharma-continuum/fast-syntax-highlighting kind:defer

@@ -48,14 +48,9 @@ done
 
 # compinit once, before any topic file: mise's hook calls compdef and runs a
 # full uncached compinit of its own when compdef does not exist yet.
-# Completion dirs (installers, zinit) must be on fpath first, or their _*
+# Completion dirs from installers must be on fpath first, or their _*
 # functions never make it into the dump.
-fpath=(
-  ~/.grok/completions/zsh
-  "${XDG_DATA_HOME:-$HOME/.local/share}/zinit/completions"
-  "${XDG_CACHE_HOME:-$HOME/.cache}/zinit/completions"
-  $fpath
-)
+fpath=(~/.grok/completions/zsh $fpath)
 autoload -Uz compinit
 _zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
 _zcompdump_stale=("$_zcompdump"(N.mh+24))
