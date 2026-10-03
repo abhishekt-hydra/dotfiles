@@ -70,19 +70,6 @@ eval "$(~/.local/bin/mise activate zsh)"
 eval "$(fzf --zsh)"
 ZSH
 fi
-powerlevel10k_dir="$HOME/.local/share/powerlevel10k"
-if [[ ! -d "$powerlevel10k_dir/.git" ]]; then
-  mkdir -p "$(dirname "$powerlevel10k_dir")"
-  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$powerlevel10k_dir"
-fi
-if ! grep -qxF '# Powerlevel10k theme.' "$HOME/.zshrc"; then
-  cat >>"$HOME/.zshrc" <<'ZSH'
-
-# Powerlevel10k theme.
-source "$HOME/.local/share/powerlevel10k/powerlevel10k.zsh-theme"
-[[ -r "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"
-ZSH
-fi
 sudo chsh -s "$(command -v zsh)" "$USER"
 docker pull clickhouse/clickhouse-server:latest
 mkdir -p "$HOME/.config/clickhouse"
