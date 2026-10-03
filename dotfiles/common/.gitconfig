@@ -19,6 +19,8 @@
 [core]
     editor = nvim
     excludesfile = ~/.gitignore_global
+    # Cache untracked-file scans: git status in big repos 52 -> 20 ms (prompt.zsh).
+    untrackedCache = true
 
 [color]
     ui = auto
