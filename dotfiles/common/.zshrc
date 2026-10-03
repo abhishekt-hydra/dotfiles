@@ -46,23 +46,39 @@ for file in ${(M)config_files:#*/path.zsh}; do
   source "$file"
 done
 
+# compinit once, before any topic file: mise's hook calls compdef and runs a
+# full uncached compinit of its own when compdef does not exist yet.
+# Completion dirs (installers, zinit) must be on fpath first, or their _*
+# functions never make it into the dump.
+fpath=(
+  ~/.grok/completions/zsh
+  "${XDG_DATA_HOME:-$HOME/.local/share}/zinit/completions"
+  "${XDG_CACHE_HOME:-$HOME/.cache}/zinit/completions"
+  $fpath
+)
+autoload -Uz compinit
+_zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
+_zcompdump_stale=("$_zcompdump"(N.mh+24))
+# Full check (new _* files, insecure dirs) at most once a day; else trust the dump.
+if [[ ! -s "$_zcompdump" || -n "$_zcompdump_stale" ]]; then
+  compinit -d "$_zcompdump"
+  touch "$_zcompdump"
+else
+  compinit -C -d "$_zcompdump"
+fi
+[[ "$_zcompdump.zwc" -nt "$_zcompdump" ]] || zcompile "$_zcompdump"
+
 # Everything except path/completion.
 for file in ${${config_files:#*/path.zsh}:#*/completion.zsh}; do
   source "$file"
 done
 
-# Completion dirs from installers that append below must be on fpath before
-# compinit runs, or their _* functions never make it into the dump.
-fpath=(~/.grok/completions/zsh $fpath)
-
 # completion.zsh last.
-autoload -Uz compinit
-compinit
 for file in ${(M)config_files:#*/completion.zsh}; do
   source "$file"
 done
 
-unset config_files file dir _zshrc_file _dotfiles_candidate _dotfiles_root_file _dotfiles_root
+unset config_files file dir _zshrc_file _dotfiles_candidate _dotfiles_root_file _dotfiles_root _zcompdump _zcompdump_stale
 
 # opencode
 export PATH=/Users/abhishek/.opencode/bin:$PATH
@@ -89,8 +105,7 @@ export PATH="/Users/abhishek/.evotai/bin:$PATH"
 
 # >>> grok installer >>>
 export PATH="$HOME/.grok/bin:$PATH"
-fpath=(~/.grok/completions/zsh $fpath)
-autoload -Uz compinit && compinit -C
+# fpath + compinit for grok happen once, above.
 # <<< grok installer <<<
 
 # Added by cua-driver-rs installer — see https://github.com/trycua/cua

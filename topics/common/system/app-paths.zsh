@@ -24,4 +24,13 @@ if [[ -d "$HOME/.fly" ]]; then
   export FLYCTL_INSTALL="$HOME/.fly"
 fi
 
+# Low-priority tool dirs: appended, so they never shadow mise or Homebrew.
+for dir in \
+  "$HOME/.cargo/bin" \
+  "$HOME/.vector/bin" \
+  "/Applications/Ghostty.app/Contents/MacOS"
+do
+  [[ -d "$dir" ]] && path+=("$dir")
+done
+
 export PATH

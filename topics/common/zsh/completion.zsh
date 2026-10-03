@@ -1,16 +1,21 @@
 # Loaded after compinit by dotfiles/common/.zshrc.
 
 if typeset -f zinit >/dev/null 2>&1; then
-  zinit light Aloxaf/fzf-tab
-
-  # Syntax highlighting should load after widgets/plugins.
-  zinit light zsh-users/zsh-syntax-highlighting
+  # Turbo mode, in this order: fzf-tab before the plugins that wrap widgets,
+  # syntax highlighting last. zicdreplay replays the compdef calls zinit
+  # captured from the turbo-loaded snippets.
+  zinit wait lucid for \
+    Aloxaf/fzf-tab \
+    atload"_zsh_autosuggest_start" \
+      zsh-users/zsh-autosuggestions \
+    atinit"zicdreplay -q" \
+      zdharma-continuum/fast-syntax-highlighting
 fi
 
 # fzf keybindings: Ctrl-R history, Ctrl-T files, Alt-C dirs.
 _fzf_keybindings_candidates=(
-  "${HOMEBREW_PREFIX:-}/opt/fzf/shell/key-bindings.zsh"
-  "$(command -v brew >/dev/null 2>&1 && brew --prefix fzf 2>/dev/null)/shell/key-bindings.zsh"
+  "${HOMEBREW_PREFIX:-/opt/homebrew}/opt/fzf/shell/key-bindings.zsh"
+  "/usr/local/opt/fzf/shell/key-bindings.zsh"
   "/usr/share/doc/fzf/examples/key-bindings.zsh"
   "/usr/share/fzf/key-bindings.zsh"
   "$HOME/.fzf/shell/key-bindings.zsh"

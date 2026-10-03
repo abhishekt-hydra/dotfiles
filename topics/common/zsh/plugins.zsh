@@ -15,21 +15,22 @@ if [[ -r "$ZINIT_HOME/zinit.zsh" ]]; then
 
   source "$ZINIT_HOME/zinit.zsh"
 
-  # Oh My Zsh libs we use, without loading all of OMZ.
-  zinit snippet OMZL::git.zsh
-  zinit snippet OMZL::directories.zsh
-  zinit snippet OMZL::theme-and-appearance.zsh
-
   # eza config: set before loading OMZ eza plugin.
   zstyle ':omz:plugins:eza' 'dirs-first' yes
   zstyle ':omz:plugins:eza' 'git-status' yes
   zstyle ':omz:plugins:eza' 'header' yes
   zstyle ':omz:plugins:eza' 'icons' yes
 
-  zinit snippet OMZP::git
-  command -v brew >/dev/null 2>&1 && zinit snippet OMZP::brew
-  command -v direnv >/dev/null 2>&1 && zinit snippet OMZP::direnv
-  command -v eza >/dev/null 2>&1 && zinit snippet OMZP::eza
+  # Turbo mode: `wait lucid` loads these right after the first prompt draws,
+  # not before it. Oh My Zsh libs we use, without loading all of OMZ.
+  # direnv is hooked in tools.zsh, so OMZP::direnv is not loaded here.
+  zinit wait lucid for \
+    OMZL::git.zsh \
+    OMZL::directories.zsh \
+    OMZL::theme-and-appearance.zsh \
+    OMZP::git
+  (( $+commands[brew] )) && zinit wait lucid for OMZP::brew
+  (( $+commands[eza] )) && zinit wait lucid for OMZP::eza
 
-  zinit light zsh-users/zsh-autosuggestions
+  # zsh-autosuggestions loads with the other widget plugins in completion.zsh.
 fi
