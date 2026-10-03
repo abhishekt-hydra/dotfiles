@@ -1,9 +1,5 @@
 # Managed by dotfiles. Local/private settings can go in ~/.localrc.
 
-# Keep startup deterministic. The generated instant-prompt cache can race when
-# multiple shells start together, so use the normal P10K prompt initialization.
-typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
-
 # Resolve the checkout from the machine-local pointer installed by script/link.
 if [[ -z "${DOTFILES:-}" ]]; then
   _zshrc_file="${${(%):-%N}:A}"
@@ -88,10 +84,6 @@ export PATH="/Users/abhishek/.evotai/bin:$PATH"
 # bun completions
 [ -s "/Users/abhishek/.bun/_bun" ] && source "/Users/abhishek/.bun/_bun"
 
-
-# Powerlevel10k appearance (hand-authored, not `p10k configure` output -- see the
-# header in that file). Sourced last so it overrides anything the OMZ snippets set.
-[[ -r "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"
 
 [ -f ~/.fly_profiles.sh ] && . ~/.fly_profiles.sh
 
