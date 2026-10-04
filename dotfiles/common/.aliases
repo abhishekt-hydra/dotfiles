@@ -45,6 +45,28 @@ big() {
 
 alias rsync="rsync -Pav"
 
+# herdr ships ad-hoc signed, so every upgrade is a new identity to macOS TCC and
+# the running server loses ~/Downloads access. Re-sign with a stable local cert
+# so the grant survives upgrades, then flag a server still on the old binary.
+_brewup_herdr_post() {
+  local identity="herdr-local-codesign" bin installed running
+  bin="$(mise where github:ogulcancelik/herdr 2>/dev/null)/herdr"
+  [[ -x "$bin" ]] || return 0
+
+  if security find-certificate -c "$identity" >/dev/null 2>&1; then
+    codesign --force --sign "$identity" --identifier dev.herdr "$bin" || return
+  else
+    print -u2 "herdr: no '$identity' cert in keychain; skipping re-sign"
+  fi
+
+  installed="$("$bin" --version 2>/dev/null)"; installed="${installed##* }"
+  running="$("$bin" status server 2>/dev/null | awk '$1 == "version:" { print $2 }')"
+  if [[ -n "$running" && "$running" != "$installed" ]]; then
+    print -u2 "herdr: server is still $running (installed $installed); new panes may hit"
+    print -u2 "       'Operation not permitted'. Run 'herdr server stop' (closes all panes), then relaunch herdr."
+  fi
+}
+
 brewup() {
   local brewup_rc=0
 
@@ -56,8 +78,9 @@ brewup() {
   fi
 
   mise upgrade github:ogulcancelik/herdr --minimum-release-age 0s || brewup_rc=$?
+  _brewup_herdr_post || brewup_rc=$?
   prodex update || brewup_rc=$?
-  npm install --global @openai/codex@latest || brewup_rc=$?
+  mise exec -- npm install --global @openai/codex@latest || brewup_rc=$?
 
   return "$brewup_rc"
 }
@@ -97,7 +120,10 @@ alias rcpy="rclone copy  -P --transfers 8 "
 # Prodex: use real codex binary, not the mise shim (shim resolves to
 # ~/.local/bin/mise and fails version check). ~/.local/bin/codex is the
 # npm install (0.153.4), stable across mise/node upgrades.
-export PRODEX_CODEX_BIN="$HOME/.local/bin/codex"
+# Hardcoded, no subprocess: $(mise which codex) cost ~45 ms per shell. Update
+# after a node upgrade; machines without this path fall back to the mise shim.
+export PRODEX_CODEX_BIN="$HOME/.local/share/mise/installs/node/26.1.0/bin/codex"
+[[ -x "$PRODEX_CODEX_BIN" ]] || PRODEX_CODEX_BIN="$HOME/.local/share/mise/shims/codex"
 
 # oxmgr -- process manager for the local services, replaced PM2 on 2026-07-31.
 # It's a *local* npm install under ~/Applications/oxmgr, so its shim is not on
