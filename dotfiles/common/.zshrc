@@ -76,7 +76,7 @@ done
 unset config_files file dir _zshrc_file _dotfiles_candidate _dotfiles_root_file _dotfiles_root _zcompdump _zcompdump_stale
 
 # opencode
-export PATH=/Users/abhishek/.opencode/bin:$PATH
+export PATH=$HOME/.opencode/bin:$PATH
 
 # Zellij: show stable pane identity in pane frame title.
 # Example: p3:Applications
@@ -90,10 +90,10 @@ fi
 # Raise per-shell open-file limit. macOS currently reports kern.maxfilesperproc=92160;
 # fall back if a parent process has a lower hard limit.
 ulimit -n 92160 2>/dev/null || ulimit -n 65536 2>/dev/null || true
-export PATH="/Users/abhishek/.evotai/bin:$PATH"
+export PATH="$HOME/.evotai/bin:$PATH"
 
 # bun completions
-[ -s "/Users/abhishek/.bun/_bun" ] && source "/Users/abhishek/.bun/_bun"
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 
 [ -f ~/.fly_profiles.sh ] && . ~/.fly_profiles.sh
@@ -104,10 +104,10 @@ export PATH="$HOME/.grok/bin:$PATH"
 # <<< grok installer <<<
 
 # Added by cua-driver-rs installer — see https://github.com/trycua/cua
-export PATH="/Users/abhishek/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 # Turso
-export PATH="$PATH:/Users/abhishek/.turso"
+export PATH="$PATH:$HOME/.turso"
 
 # AgentField CLI
-export PATH="/Users/abhishek/.agentfield/bin:$PATH"
+export PATH="$HOME/.agentfield/bin:$PATH"

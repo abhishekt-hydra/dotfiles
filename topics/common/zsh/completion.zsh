@@ -10,14 +10,22 @@ _fzf_keybindings_candidates=(
   "$HOME/.fzf/shell/key-bindings.zsh"
 )
 
+_fzf_keybindings_loaded=
 for _fzf_keybindings in "${_fzf_keybindings_candidates[@]}"; do
   if [[ -r "$_fzf_keybindings" ]]; then
     source "$_fzf_keybindings"
+    _fzf_keybindings_loaded=1
     break
   fi
 done
 
-unset _fzf_keybindings _fzf_keybindings_candidates
+# fzf from mise ships only the binary, with no shell/ dir. fzf 0.48+ prints
+# its own key bindings (plus ** completion; fzf-tab still owns Tab).
+if [[ -z "$_fzf_keybindings_loaded" ]] && (( $+commands[fzf] )); then
+  source <(fzf --zsh 2>/dev/null)
+fi
+
+unset _fzf_keybindings _fzf_keybindings_candidates _fzf_keybindings_loaded
 
 # Completion behavior:
 # - show/select the completion menu on the first Tab

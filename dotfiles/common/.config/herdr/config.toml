@@ -35,7 +35,7 @@ description = "open file from agent output"
 [[keys.command]]
 key = "prefix+shift+m"
 type = "shell"
-command = "/Users/abhishek/.config/herdr/move-pane-to-new-tab.sh"
+command = "$HOME/.config/herdr/move-pane-to-new-tab.sh"
 
 [[keys.command]]
 key = "prefix+t"
