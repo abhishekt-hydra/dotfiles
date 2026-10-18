@@ -154,6 +154,40 @@ holder-directory path to show a menu-bar indicator. Optional `hotspot` and
 `hotspot_leave` shell functions join a hotspot while a lid-safe hold is active
 and restore the prior network once the last holder exits.
 
+## macOS tiling: OmniWM
+
+[OmniWM](https://github.com/OmniNull/OmniWM) (`cask "omniwm"`) replaces
+yabai + skhd (archived in `archive/yabai-skhd/`). Its config is
+`~/.config/omniwm/settings.toml`, live-reloaded on save and tracked by mise.
+
+Setup it expects: grant Accessibility and Input Monitoring, keep "Displays
+have separate Spaces" on, and keep **one macOS desktop per display**. Windows
+on extra native desktops still hold a tile in their OmniWM workspace, which
+leaves empty holes in the layout.
+
+All workspaces use the `dwindle` (i3-style) layout: one window fills the
+screen, each new one halves the focused tile. Workspaces 1-4 live on the main
+display, 5-9 on the secondary. Focus follows the mouse, so new windows open on
+the display under the pointer. Dragging a tiled window to another display
+snaps it back; move it with the keyboard instead.
+
+| Keys | Action |
+|---|---|
+| `Option+1-9` | Switch to workspace (on its own display) |
+| `Option+Shift+1-9` | Move window to workspace |
+| `Option+Arrows` | Focus window |
+| `Option+Shift+Arrows` | Move window; crosses to the next display at the edge |
+| `Option+Return` | Toggle fullscreen within OmniWM (temporary, snaps back) |
+| `Option+Shift+Return` | Toggle native macOS fullscreen |
+| `Option+E` / `Option+Shift+E` | Toggle split direction / swap split |
+| `Option+Shift+B` | Balance sizes |
+| `Option+Shift+L` | Toggle workspace layout (dwindle / niri) |
+| `Option+Shift+O` | Overview (Option+drag a window onto a workspace) |
+| `Control+Command+Tab` | Focus next display |
+
+`omniwmctl` (IPC enabled) scripts and queries it, e.g.
+`omniwmctl query workspaces --format table`.
+
 ## Linux caffeinate
 
 The Linux profile seeds `~/.local/bin/caffeinate` and enrolls it in mise

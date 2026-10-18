@@ -13,7 +13,7 @@ defaults write NSGlobalDomain InitialKeyRepeat -int 15
 defaults write com.apple.finder AppleShowAllFiles -bool true
 defaults write com.apple.dock autohide -bool true
 
-# Keep numbered yabai Spaces stable and make multi-display focus reliable.
+# Keep numbered Spaces stable and make multi-display focus reliable.
 defaults write com.apple.dock mru-spaces -bool false
 defaults write com.apple.finder CreateDesktop -bool true
 defaults write com.apple.WindowManager StandardHideDesktopIcons -bool false
