@@ -52,6 +52,7 @@
 hurl = "8.0.1"
 
 # Runtimes and CLIs
+dust = "1.2.6"
 eza = "latest"
 elixir = "1.19.5"
 erlang = "28.5"

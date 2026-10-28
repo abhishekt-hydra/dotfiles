@@ -31,16 +31,10 @@ extract() {
 # Keep private exports/API keys out of git.
 [[ -f "$HOME/.secrets" ]] && source "$HOME/.secrets"
 
-# List top files/folders in the current directory.
+# Show the 20 largest entries with disk usage.
+unalias big 2>/dev/null
 big() {
-  echo "==== Total Directory Size ===="
-  du -sh .
-  echo ""
-  echo "==== Top 20 Biggest Folders ===="
-  du -ah . | sort -rh | head -n 20
-  echo ""
-  echo "==== Top 20 Biggest Files ===="
-  find . -type f -exec du -h {} + | sort -rh | head -n 20
+  dust -n 20 "$@"
 }
 
 alias rsync="rsync -Pav"
