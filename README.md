@@ -125,6 +125,37 @@ record that machine's checkout path. Ongoing synchronization needs Git credentia
 - Mise installs runtimes/dev CLIs from `templates/mise/config.toml`: node, python, ruby, go, rust, java, erlang/elixir, neovim, helm, eza, gh, ripgrep, lazygit, rclone, tuicr, etc.
 - Devtools are installed through mise in a separate script section: `mise use -g hurl@8.0.1`.
 - Optional k8s/gRPC CLIs are installed through mise, not Homebrew: `./script/mise --with-k8s-tools` runs `mise use -g github:txn2/kubefwd kubectl grpcurl`.
+
+The tool categories live in `templates/mise/config.toml`. On a new macOS or
+Debian/Ubuntu machine, seed the global config without installing tools:
+
+```sh
+./script/mise --no-tools
+```
+
+Choose a category to install:
+
+| Category | Command |
+| --- | --- |
+| Runtimes | `mise run --skip-tools install-runtimes` |
+| Development tools: uv, ast-grep, ruff, golangci-lint, hurl, plus Go | `mise run --skip-tools install-dev-tools` |
+| Media tools: yt-dlp, mpv, ffmpeg | `mise run --skip-tools install-media-tools` |
+| Native system libraries, build tools, and system CLIs | `mise run --skip-tools install-system` |
+| Desktop apps on macOS | `mise run --skip-tools install-apps` |
+| Development and media tools together | `mise run --skip-tools install-cli-tools` |
+
+`--skip-tools` prevents the task runner from installing unrelated configured tools.
+The selected task installs its category using the configured versions.
+The system task uses Homebrew on macOS and apt on Debian/Ubuntu, plus Homebrew
+on Linux when it is installed. Desktop apps are currently configured only for macOS.
+
+Install all configured tools with `mise bootstrap --only tools`, or apply both
+native packages and tools with `mise bootstrap --only packages,tools`.
+`mpv` uses mise's conda backend for its native dependencies.
+
+`./script/mise` preserves existing global configs. On an existing machine, merge
+the tool entries and install tasks from the template into `~/.config/mise/config.toml`.
+
 - Keeping mise current after the initial install is `./script/mise-upgrade`; it upgrades floating tools and prunes the versions they replace.
 - Shell startup activates mise through `topics/common/system/mise.zsh`.
 

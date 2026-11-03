@@ -1,6 +1,5 @@
 [bootstrap.packages]
-# No duplication: portable CLIs use one unscoped brew: line (macOS + Linux).
-# System-integrated tools (git/zsh) stay native per-OS; -dev libs stay apt-only.
+# System libraries, build tools, and system CLI tools
 "brew:autoconf" = "latest"
 "brew:automake" = "latest"
 "brew:bat" = "latest"
@@ -16,20 +15,13 @@
 "brew:wget" = "latest"
 "brew:xz" = "latest"
 "brew:zoxide" = "latest"
-# System-integrated — native per OS
 "brew:git" = { os = "macos", version = "latest" }
 "brew:zsh" = { os = "macos", version = "latest" }
-# macOS-only shims (Linux has these natively / via apt -dev below)
 "brew:coreutils" = { os = "macos", version = "latest" }
 "brew:libyaml" = { os = "macos", version = "latest" }
 "brew:openssl@3" = { os = "macos", version = "latest" }
 "brew:readline" = { os = "macos", version = "latest" }
 "brew:zlib" = { os = "macos", version = "latest" }
-"brew-cask:1password" = { os = "macos" }
-"brew-cask:ghostty" = { os = "macos" }
-"brew-cask:raycast" = { os = "macos" }
-"brew-cask:visual-studio-code" = { os = "macos" }
-# Linux-only: system-integrated counterparts + build libs / system tools
 "apt:git" = { os = "linux", version = "latest" }
 "apt:zsh" = { os = "linux", version = "latest" }
 "apt:build-essential" = { os = "linux", version = "latest" }
@@ -47,33 +39,90 @@
 "apt:xclip" = { os = "linux", version = "latest" }
 "apt:zlib1g-dev" = { os = "linux", version = "latest" }
 
+# Desktop apps
+"brew-cask:1password" = { os = "macos" }
+"brew-cask:ghostty" = { os = "macos" }
+"brew-cask:raycast" = { os = "macos" }
+"brew-cask:visual-studio-code" = { os = "macos" }
+
 [tools]
-# Devtools
+# Runtimes
+go = "latest"
+node = "26.1.0"
+python = "3.13.13"
+ruby = "3.4.5"
+rust = { version = "latest", mr_boxington = true }
+erlang = "28.5"
+elixir = "1.19.5"
+java = "latest"
+
+# Development tools
+uv = "latest"
+ast-grep = "latest"
+ruff = "latest"
+golangci-lint = "latest"
 hurl = "8.0.1"
 
-# Runtimes and CLIs
+# Media tools
+yt-dlp = { version = "latest", rename_exe = "yt-dlp" }
+mpv = "latest"
+ffmpeg = "latest"
+
+# Other CLI tools
 dust = "1.2.6"
 eza = "latest"
-elixir = "1.19.5"
-erlang = "28.5"
 "github:Ataraxy-Labs/lazydiff" = "0.1.0-alpha.7"
 "github:agavra/tuicr" = "latest"
 gh = "latest"
-go = "latest"
 helm = "latest"
-java = "latest"
 lazygit = "latest"
 neovim = "latest"
-node = "26.1.0"
-python = "3.13.13"
 rclone = "latest"
 ripgrep = "latest"
-ruby = "3.4.5"
 mr-boxington = { version = "latest", postinstall = "mbx setup --yes" }
-rust = { version = "latest", mr_boxington = true }
 btop = "1.2.13"
 
 [settings]
 
 [settings.ruby]
 compile = false
+
+[tasks.install-runtimes]
+description = "Install runtimes with mise"
+run = "mise install go node python ruby rust erlang elixir java"
+
+[tasks.install-dev-tools]
+description = "Install dev tools with mise"
+run = "mise install uv ast-grep ruff golangci-lint hurl go"
+
+[tasks.install-media-tools]
+description = "Install media tools with mise"
+run = "mise install yt-dlp mpv ffmpeg"
+
+[tasks.install-cli-tools]
+description = "Install development and media tools"
+depends = ["install-dev-tools", "install-media-tools"]
+
+[tasks.install-system]
+description = "Install native system libraries and build tools"
+run = """
+case "$(uname -s)" in
+  Darwin) mise bootstrap packages apply --manager brew ;;
+  Linux)
+    mise bootstrap packages apply --manager apt
+    if command -v brew >/dev/null 2>&1; then
+      mise bootstrap packages apply --manager brew
+    fi
+    ;;
+  *) echo "System packages support macOS and Debian/Ubuntu Linux" >&2; exit 1 ;;
+esac
+"""
+
+[tasks.install-apps]
+description = "Install desktop apps on macOS"
+run = """
+case "$(uname -s)" in
+  Darwin) mise bootstrap packages apply --manager brew-cask ;;
+  *) echo "No desktop apps configured for this OS" ;;
+esac
+"""
